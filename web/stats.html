@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=9,IE=10"><!-- ticket #4555 --> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<link href="./images/favicon.ico" rel="icon" />
+		<link href="./images/favicon.png" rel="shortcut icon" />
+		<link rel="apple-touch-icon" href="./images/webclip-icon.png"/>
+		<!-- jquery -->
+		<script type="text/javascript" src="./js/jquery/jquery-1.11.1.min.js"></script>
+		<!-- bootstrap -->
+		<script type="text/javascript" src="js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
+		<!-- bootstrap multiselect thing for status filtering -->
+		<script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+		<link rel="stylesheet" href="css/bootstrap-multiselect.css" type="text/css"/>
+		<!-- bootstrap slider thing -->
+		<script type="text/javascript" src="js/bootstrap-slider.js"></script>
+		<link rel="stylesheet" href="css/bootstrap-slider.css" type="text/css"/>
+		<!-- custom style foo -->
+		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
+		<!-- transmission logic foo -->
+
+		<title>Transmission Statistics</title>
+	</head>
+	<body>
+        <nav class="navbar navbar-default navbar-top" role="navigation">
+            <div class="container-fluid" id="toolbar">
+                <ul class="nav navbar-nav">
+					<li><div class="navbar-brand">Statistics</div></li>
+				</ul>
+			</div>
+		</nav>
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-2"></div>
+				<div class="col-sm-2"><strong>Current Session</strong></div>
+				<div class="col-sm-2"><strong>Total</strong></div>
+				<div class="col-sm-6"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-2 text-right"><b>Uploaded</b></div>
+				<div class="col-sm-2">{{stats-session-uploaded}}</div>
+				<div class="col-sm-2">{{stats-total-uploaded}}</div>
+				<div class="col-sm-6"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-2 text-right"><b>Downloaded</b></div>
+				<div class="col-sm-2">{{stats-session-downloaded}}</div>
+				<div class="col-sm-2">{{stats-total-downloaded}}</div>
+				<div class="col-sm-6"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-2 text-right"><b>Ratio</b></div>
+				<div class="col-sm-2">{{stats-session-ratio}}</div>
+				<div class="col-sm-2">{{stats-total-ratio}}</div>
+				<div class="col-sm-6"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-2 text-right"><b>Running Time</b></div>
+				<div class="col-sm-2">{{stats-session-duration}}</div>
+				<div class="col-sm-2">{{stats-total-duration}}</div>
+				<div class="col-sm-6"></div>
+			</div>
+			<div class="row">
+				<div class="col-sm-2 text-right"><b>Started</b></div>
+				<div class="col-sm-2"></div>
+				<div class="col-sm-2">{{stats-total-count}}</div>
+				<div class="col-sm-6"></div>
+			</div>
+		</div>
+	</div>
+

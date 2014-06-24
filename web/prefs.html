@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=9,IE=10"><!-- ticket #4555 --> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<link href="./images/favicon.ico" rel="icon" />
+		<link href="./images/favicon.png" rel="shortcut icon" />
+		<link rel="apple-touch-icon" href="./images/webclip-icon.png"/>
+		<!-- jquery -->
+		<script type="text/javascript" src="./js/jquery/jquery-1.11.1.min.js"></script>
+		<!-- bootstrap -->
+		<script type="text/javascript" src="js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
+		<!-- bootstrap multiselect thing for status filtering -->
+		<script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+		<link rel="stylesheet" href="css/bootstrap-multiselect.css" type="text/css"/>
+		<!-- bootstrap slider thing -->
+		<script type="text/javascript" src="js/bootstrap-slider.js"></script>
+		<link rel="stylesheet" href="css/bootstrap-slider.css" type="text/css"/>
+		<!-- custom style foo -->
+		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
+		<!-- transmission logic foo -->
+
+		<title>Transmission Preferences</title>
+	</head>
+	<body>
+        <nav class="navbar navbar-default navbar-top" role="navigation">
+            <div class="container-fluid" id="toolbar">
+				<div class="collapse navbar-collapse" id="toolbar-collapse">
+					<ul class="nav navbar-nav">
+						<li><div class="navbar-brand">Preferences</div></li>
+						<li class="active"><a id="prefs-tab-general" href="#prefs-page-torrents">Torrents</a></li>
+						<li><a id="prefs-tab-speed" href="#prefs-page-speed">Speed</a></li>
+						<li><a id="prefs-tab-peers" href="#prefs-page-peers">Peers</a></li>
+						<li><a id="prefs-tab-network" href="#prefs-page-network">Network</a></li>
+					</ul>
+				</div>
+			</div>
+		</nav>
+		<div class="container">
+			<div class="tab-content">
+				<div class="tab-pane active" id="prefs-page-torrents">
+					<div class="panel panel-default">
+						<div class=panel-heading>Downloading</div>
+						<div class="panel-body">
+							<form role="form">
+								<div class="form-group">
+									<label for="download-dir">Download to</label>
+									<input type="text" class="form-control" id="download-dir"/>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="start-added-torrents"/>
+									<label for="start-added-torrents">Start when added</label>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="rename-partial-files"/>
+									<label for="rename-partial-files">Append &quot;.part&quot; to incomplete files' names</label>
+								</div>
+							</form>
+						</div>
+					</div>
+
+					<div class="panel panel-default">
+						<div class=panel-heading>Seeding</div>
+						<div class="panel-body">
+							<form role="form">
+								<div class="form-group">
+									<input type="checkbox" id="seedRatioLimited"/>
+									<label for="seedRatioLimited">Stop seeding at ratio</label>
+									<input type="text" type="number" class="form-control" id="seedRatioLimit"/>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="idle-seeding-limit-enabled"/>
+									<label for="idle-seeding-limit-enabled">Stop seeding if idle for (min)</label>
+									<input type="text" class="form-control" type="number" id="idle-seeding-limit"/>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+
+				<div class="tab-pane" id="prefs-page-speed">
+					<div class="panel panel-default">
+						<div class=panel-heading>Speed limits</div>
+						<div class="panel-body">
+							<form role="form">
+								<div class="form-group">
+									<input type="checkbox" id="speed-limit-up-enabled"/>
+									<label for="speed-limit-up-enabled">Upload (kB/s)</label>
+									<input id="speed-limit-up" class="form-control" data-slider-id="upLimitSlider" type="number" data-slider-min="0" data-slider-max="750" data-slider-step="1" data-slider-value="0"/>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="speed-limit-down-enabled"/>
+									<label for="speed-limit-down-enabled">Download (kB/s):</label>
+									<input id="speed-limit-down" class="form-control" data-slider-id="downLimitSlider" type="number" data-slider-min="0" data-slider-max="750" data-slider-step="1" data-slider-value="0"/>
+								</div>
+							</form>
+						</div>
+					</div>
+					<div class="panel panel-default">
+						<div class="panel-heading">Alternative Speed Limits</div>
+						<div class="panel-body">
+							<form role="form">
+								<h4>Can be triggered manually or time-based</h4>
+								<div class="form-group">
+									<label for="alt-speed-up">Upload (kB/s)</label>
+									<input id="alt-speed-limit-up" class="form-control" data-slider-id="altUpLimitSlider" type="number" data-slider-min="0" data-slider-max="750" data-slider-step="1" data-slider-value="0"/>
+								</div>
+								<div class="form-group">
+									<label for="alt-speed-down">Download (kB/s)</label>
+									<input id="alt-speed-limit-down" class="form-control" data-slider-id="altDownLimitSlider" type="number" data-slider-min="0" data-slider-max="750" data-slider-step="1" data-slider-value="0"/>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="alt-speed-time-enabled"/>
+									<label for="alt-speed-time-enabled">Scheduled Times</label>
+								</div>
+								<div class="form-group">
+									<label for="alt-speed-time-begin">From</label>
+									<input type="text" type="number" class="form-control" id="alt-speed-time-begin"/>
+								</div>
+								<div class="form-group">
+									<label for="alt-speed-time-end">To</label>
+									<input type="text" type="number" class="form-control" id="alt-speed-time-end"/>
+								</div>
+								<div class="form-group">
+									<label for="alt-speed-time-day">On days</label>
+									<select style="display: none;" id="alt-speed-time-day" multiple="multiple">
+										<option value="1">Sunday</option>
+										<option value="2">Monday</option>
+										<option value="4">Tuesday</option>
+										<option value="8">Wednesday</option>
+										<option value="16">Thursday</option>
+										<option value="32">Friday</option>
+										<option value="64">Saturday</option>
+									</select>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+
+				<div class="tab-pane" id="prefs-page-peers">
+					<div class="panel panel-default">
+						<div class="panel-heading">Connections</div>
+						<div class="panel-body">
+							<form role="form">
+								<div class="form-group">
+									<label for="peer-limit-per-torrent">Max peers per torrent</label>
+									<input type="number" class="form-control" id="peer-limit-per-torrent"/>
+								 </div>
+								 <div class="form-group">
+									 <label for="peer-limit-global">Max peers overall</label>
+									 <input type="number" class="form-control" id="peer-limit-global"/>
+								 </div>
+							</form>
+						</div>
+					</div>
+
+					<div class="panel panel-default">
+						<div class="panel-heading">Options</div>
+						<div class="panel-body">
+							<form role="form">
+								<div class="form-group">
+									<label for="encryption">Encryption mode:</label>
+									<select id="encryption">
+										<option value="tolerated">Allow encryption</option>
+										<option value="preferred" selected>Prefer encryption</option>
+										<option value="required">Require encryption</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="pex-enabled" title="PEX is a tool for exchanging peer lists with the peers you're connected to."/>
+									<label for="pex-enabled" title="PEX is a tool for exchanging peer lists with the peers you're connected to.">Use PEX to find more peers</label>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="dht-enabled" title="DHT is a tool for finding peers without a tracker."/>
+									<label for="dht-enabled" title="DHT is a tool for finding peers without a tracker.">Use DHT to find more peers</label>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="lpd-enabled" title="LPD is a tool for finding peers on your local network."/>
+									<label for="lpd-enabled" title="LPD is a tool for finding peers on your local network.">Use LPD to find more peers</label>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+
+				<div class="tab-pane" id="prefs-page-network">
+					<div class="panel panel-default">
+						<div class="panel-heading">Listening Port</div>
+						<div class="panel-body">
+							<form role="form">
+								<div class="form-group">
+									<label for="peer-port">Peer listening port:</label>
+									<div class="form-group has-warning has-feedback">
+										<label class="control-label" for="peer-port">Status: Unknown</label>
+										<input type="text" class="form-control" type="number" id="peer-port"/>
+										<span class="glyphicon glyphicon-warning-sign form-control-feedback"></span>
+									</div>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="peer-port-random-on-start"/>
+									<label for="peer-port-random-on-start">Randomize port on launch</label>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="port-forwarding-enabled"/>
+									<label for="port-forwarding-enabled">Use port forwarding from my router</label>
+								</div>
+								<div class="form-group">
+									<input type="checkbox" id="utp-enabled" title="uTP is a tool for reducing network congestion."/>
+									<label for="utp-enabled" title="uTP is a tool for reducing network congestion.">Enable uTP for peer communication</label>
+								</div>
+							</form>
+						</div>
+					</div>
+					<div class="panel panel-default">
+						<div class="panel-heading">Blocklist</div>
+						<div class="panel-body">
+							<div class="form-group">
+								<input type="checkbox" id="blocklist-enabled"/>
+								<label for="blocklist-enabled">Enable blocklist</label>
+								<div class="input-group">
+									<div class="form-group has-warning has-feedback">
+										<label class="control-label" for="blocklist-url">
+											Blocklist has <span id="blocklist-size">?</span> rules
+										</label>
+										<div class="input-group">
+											<input type="url" class="form-control" id="blocklist-url"/>
+											<span class="input-group-btn">
+												<a class="btn btn-default" id="blocklist-update-button"/>Update</a>
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$("#speed-limit-up").slider({tooltip: 'always'});
+				$("#speed-limit-down").slider({tooltip: 'always'});
+				$("#alt-speed-limit-up").slider({tooltip: 'always'});
+				$("#alt-speed-limit-down").slider({tooltip: 'always'});
+				$('#alt-speed-time-day').multiselect({includeSelectAllOption: true, selectAllText: "Everyday"});
+				var tabs = [ '#prefs-tab-general', '#prefs-tab-speed', '#prefs-tab-peers', '#prefs-tab-network' ]
+				for(var i=0; i<tabs.length; i++){
+					$(tabs[i]).click(function (e) {
+						e.preventDefault()
+						$(this).tab('show')
+					});
+				}
+			});
+		</script>
+	</body>
+</html>

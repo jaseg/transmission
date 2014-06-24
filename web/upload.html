@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=9,IE=10"><!-- ticket #4555 --> 
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<link href="./images/favicon.ico" rel="icon" />
+		<link href="./images/favicon.png" rel="shortcut icon" />
+		<link rel="apple-touch-icon" href="./images/webclip-icon.png"/>
+		<!-- jquery -->
+		<script type="text/javascript" src="./js/jquery/jquery-1.11.1.min.js"></script>
+		<!-- bootstrap -->
+		<script type="text/javascript" src="js/bootstrap.min.js"></script>
+		<link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
+		<!-- bootstrap multiselect thing for status filtering -->
+		<script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+		<link rel="stylesheet" href="css/bootstrap-multiselect.css" type="text/css"/>
+		<!-- bootstrap slider thing -->
+		<script type="text/javascript" src="js/bootstrap-slider.js"></script>
+		<link rel="stylesheet" href="css/bootstrap-slider.css" type="text/css"/>
+		<!-- custom style foo -->
+		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
+		<!-- transmission logic foo -->
+
+		<title>Transmission Torrent Upload</title>
+	</head>
+	<body>
+        <nav class="navbar navbar-default navbar-top" role="navigation">
+            <div class="container-fluid" id="toolbar">
+                <ul class="nav navbar-nav">
+                    <li><div class="navbar-brand">Add torrent</div></li>
+					<li id="free-space-thing"></li>
+                </ul>
+            </div>
+        </nav>
+		<div class="container">
+			<div class="jumbotron">
+				<form action="#" method="post" id="torrent_upload_form" enctype="multipart/form-data" target="torrent_upload_frame">
+					<div class="form-group">
+						<label for="torrent_upload_file">Select a torrent file</label>
+						<input type="file" name="torrent_files[]" id="torrent_upload_file" multiple="multiple"/>
+					</div>
+					<div class="form-group">
+						<label for="torrent_upload_url">Or enter a URL</label>
+						<input type="url" class="form-control" id="torrent_upload_url"/>
+					</div>
+					<div class="form-group">
+						<input type="checkbox" id="torrent_auto_start"/>
+						<label for="torrent_auto_start" id="auto_start_label">Start when added</label>
+					</div>
+					<a href="#upload" id="upload_confirm_button" class="btn btn-success">Upload</a>
+				</form>
+			</div>
+	 	</div>
+
+		<iframe name="torrent_upload_frame" id="torrent_upload_frame" src="about:blank" ></iframe>
+		
+		<script type="text/javascript">
+			$(document).ready(function() {
+				document.remote.getFreeSpace(function(bytes){
+					$("#free-space-thing").text(Transmission.fmt.size(bytes));
+				});
+			});
+		</script>
+	</body>
+</html>

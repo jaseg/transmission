@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=9,IE=10"><!-- ticket #4555 --> 
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"/>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <link href="./images/favicon.ico" rel="icon" />
+        <link href="./images/favicon.png" rel="shortcut icon" />
+        <link rel="apple-touch-icon" href="./images/webclip-icon.png"/>
+        <!-- jquery -->
+        <script type="text/javascript" src="./js/jquery/jquery-1.11.1.min.js"></script>
+        <!-- bootstrap -->
+        <script type="text/javascript" src="js/bootstrap.min.js"></script>
+        <link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
+        <!-- bootstrap multiselect thing for status filtering -->
+        <script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+        <link rel="stylesheet" href="css/bootstrap-multiselect.css" type="text/css"/>
+        <!-- custom style foo -->
+        <link rel="stylesheet" href="css/custom.css" type="text/css"/>
+        <!-- transmission logic foo -->
+
+        <title>Torrent details: ({{percentage}}) {{torrent_title}}</title>
+    </head>
+    <body>
+        <nav class="navbar navbar-default navbar-top" role="navigation">
+            <div class="container-fluid" id="toolbar">
+                <ul class="nav navbar-nav">
+                    <li><div class="navbar-brand">{{torrent_title}}</div></li>
+                    <li class="active"><a id="tab-info" href="#page-info">Info</a></li>
+                    <li><a id="tab-files" href="#page-files">Files</a></li>
+                    <li><a id="tab-peers" href="#page-peers">Peers</a></li>
+                    <li><a id="tab-trackers" href="#page-trackers">Trackers</a></li>
+                    <li class="dropdown" id="toolbar-dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown"><b class="glyphicon glyphicon-wrench"></b><b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li id="context_verify"><a href="#">Verify Local Data</a></li>
+                            <li id="context_move"><a href="#">Set Location…</a></li>
+                            <li id="context_rename"><a href="#">Rename…</a></li>
+                            <li id="context_reannounce"><a href="#">Ask tracker for more peers</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="tab-content">
+                <div class="tab-pane active" id="page-info">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Activity</div>
+                        <div class="panel-body">
+                            <strong class="col-sm-2 text-right">Have            </strong><div class="col-sm-10">{{have}}</div>
+                            <strong class="col-sm-2 text-right">Availability    </strong><div class="col-sm-10">{{availability}}</div>
+                            <strong class="col-sm-2 text-right">Uploaded        </strong><div class="col-sm-10">{{uploaded}}</div>
+                            <strong class="col-sm-2 text-right">Downloaded      </strong><div class="col-sm-10">{{downloaded}}</div>
+                            <strong class="col-sm-2 text-right">State           </strong><div class="col-sm-10">{{info-state}}</div>
+                            <strong class="col-sm-2 text-right">Running Time    </strong><div class="col-sm-10">{{running-time}}</div>
+                            <strong class="col-sm-2 text-right">Remaining Time  </strong><div class="col-sm-10">{{remaining-time}}</div>
+                            <strong class="col-sm-2 text-right">Last Activity   </strong><div class="col-sm-10">{{last-activity}}</div>
+                            <strong class="col-sm-2 text-right">Error           </strong><div class="col-sm-10">{{info-error}}</div>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">Details</div>
+                        <div class="panel-body">
+                            <strong class="col-sm-2 text-right">Size    </strong><div class="col-sm-10">{{size}}</div>
+                            <strong class="col-sm-2 text-right">Location</strong><div class="col-sm-10">{{location}}</div>
+                            <strong class="col-sm-2 text-right">Hash    </strong><div class="col-sm-10">{{hash}}</div>
+                            <strong class="col-sm-2 text-right">Privacy </strong><div class="col-sm-10">{{privacy}}</div>
+                            <strong class="col-sm-2 text-right">Origin  </strong><div class="col-sm-10">{{origin}}</div>
+                            <strong class="col-sm-2 text-right">Comment </strong><div class="col-sm-10">{{comment}}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane" id="page-files">
+                </div>
+                <div class="tab-pane" id="page-peers">
+                </div>
+                <div class="tab-pane" id="page-trackers">
+                </div>
+            </div>
+        </div>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				var tabs = [ '#tab-info', '#tab-files', '#tab-peers', '#tab-trackers' ]
+				for(var i=0; i<tabs.length; i++){
+					$(tabs[i]).click(function (e) {
+						e.preventDefault()
+						$(this).tab('show')
+					});
+				}
+			});
+		</script>
+    </body>
+</html>

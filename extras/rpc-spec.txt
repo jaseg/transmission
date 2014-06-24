@@ -602,23 +602,17 @@
 
 4.7.  Free Space
 
-   This method tests how much free space is available in a
-   client-specified folder.
+   This method tests how much free space is available in the download directory
 
    Method name: "free-space"
 
-   Request arguments:
-
-   string      | value type & description
-   ------------+----------------------------------------------------------
-   "path"      | string  the directory to query
+   Request arguments: None.
 
    Response arguments:
 
    string      | value type & description
    ------------+----------------------------------------------------------
-   "path"      | string  same as the Request argument
-   "size-bytes"| number  the size, in bytes, of the free space in that directory
+   "size-bytes"| number  the size, in bytes, of the free space in the download directory
 
 
 5.0.  Protocol Versions

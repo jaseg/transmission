@@ -2093,22 +2093,17 @@ freeSpace (tr_session               * session,
            struct tr_rpc_idle_data  * idle_data UNUSED)
 {
   int tmperr;
-  const char * path = NULL;
   const char * err = NULL;
   int64_t free_space = -1;
 
-  /* get the free space */
-  tr_variantDictFindStr (args_in, TR_KEY_path, &path, NULL);
   tmperr = errno;
   errno = 0;
-  free_space = tr_sessionGetDirFreeSpace (session, path);
+  free_space = tr_sessionGetDirFreeSpace (session, NULL);
   if (free_space < 0)
     err = tr_strerror (errno);
   errno = tmperr;
 
   /* response */
-  if (path != NULL)
-    tr_variantDictAddStr (args_out, TR_KEY_path, path);
   tr_variantDictAddInt (args_out, TR_KEY_size_bytes, free_space);
   return err;
 }
