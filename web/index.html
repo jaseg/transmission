@@ -26,6 +26,11 @@
 		<nav class="navbar navbar-default navbar-top" role="navigation">
 			<div class="container-fluid" id="toolbar">
 				<div class="navbar-header">
+					<ul class="nav navbar-nav">
+						<li>
+							<a href="about.html" class="navbar-brand">Transmission</a>
+						</li>
+					</ul>
 					<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
 						<span class="sr-only">Toggle navigation</span>
 						<span class="icon-bar"></span>
@@ -64,11 +69,11 @@
 								<li role="presentation"><a role="menuitem" tabindex="-1" href="#" id="toolbar-remove-delete" data-toggle="modal" data-target="#remove-delete-modal">Delete data and remove from list</a></li>
 							</ul>
 						</div>
-						<input type="text" class="form-control" placeholder="Filter">
+						<input type="text" class="form-control" placeholder="Filter" id="filter-text">
 						<div class="btn-group">
 							<div class="input-group btn-group" style="width: 100px">
 								<span class="input-group-addon"><b class="glyphicon glyphicon-filter"></b></span>
-								<select style="display: none;" id="torrent-filter-select" multiple="multiple">
+								<select style="display: none;" id="filter-state" multiple="multiple">
 									<option value="downloading" selected>downloading</option>
 									<option value="seeding" selected>seeding</option>
 									<option value="inactive" selected>inactive</option>
@@ -134,6 +139,9 @@
 							</ul>
 						</li>
 						<li>
+							<a href="stats.html" target="_blank" title="Preferences"><span class="glyphicon glyphicon-stats"></span></a>
+						</li>
+						<li>
 							<a href="prefs.html" target="_blank" title="Preferences"><span class="glyphicon glyphicon-cog"></span></a>
 						</li>
 					</ul>
@@ -142,42 +150,25 @@
 			<div class="alert alert-warning" id="connection-lost-alert" style="display: none;">
 				Cannot connect to Transmission, please wait…
 			</div>
+			<div class="alert alert-danger alert-dismissable" id="error-alert" style="display: none;">
+				<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+				<strong>Error!</strong><span id="error-alert-text"></span>
+			</div>
 		</nav>
 
-		<div class="list-group" id="torrent_container">
-			<ul class="torrent_list" id="torrent_list"></ul>
-		</div>
-
-		<!-- Torrent rename container -->
-        <div class="dialog_container" id="rename_container" style="display:none;">
-            <div class="dialog_top_bar"></div>
-            <div class="dialog_window">
-                <div class="dialog_logo"></div>
-                <h2 class="dialog_heading">Rename torrent</h2>
-                <div class="dialog_message">
-                    <label for="torrent_rename_name">Enter new name:</label>
-                    <input type="text" id="torrent_rename_name"/>
-                </div>
-                <a href="#rename" id="rename_confirm_button">Rename</a>
-                <a href="#cancel" id="rename_cancel_button">Cancel</a>
-            </div>
-        </div>
-
-		<!-- Torrent data file move dialog -->
-		<div class="dialog_container" id="move_container" style="display:none;">
-			<div class="dialog_top_bar"></div>
-			<div class="dialog_window">
-				<div class="dialog_logo" id="move_dialog_logo"></div>
-				<h2 class="dialog_heading">Set Location</h2>
-				<form action="#" method="post" id="torrent_move_form" enctype="multipart/form-data" target="torrent_move_frame">
-					<div class="dialog_message">
-						<label for="torrent_path">Location</label>
-						<input type="text" id="torrent_path"/>
+		<div class="container" id="torrent_container">
+			<ul class="list-group" id="torrent_list">
+				<li class="list-group-item" id="torrent-entry-template">
+					<span class="h4" id="title">Torrent title</span>
+					<span id="size">42/623MB</span>
+					<span class="badge" style="margin-right: 15px"><span id="ratio">23.5</span>×</span>
+					<div class="progress torrent-progress-bar">
+						<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+							60%
+						</div>
 					</div>
-					<a href="#move" id="move_confirm_button">Apply</a>
-					<a href="#cancel" id="move_cancel_button">Cancel</a>
-				</form>
-			</div>
+				</li>
+			</ul>
 		</div>
 
 		<!-- Torrent removal dialog -->
@@ -189,7 +180,7 @@
 						<h4 class="modal-title" id="remove-modal-label">Remove torrent from list</h4>
 					</div>
 					<div class="modal-body">
-						<!-- FIXME include number of selected torrents here as a small measure against mistakes -->
+						<!-- TODO include number of selected torrents here as a small measure against mistakes -->
 						<p>Are you sure you want to remove all selected torrents from the list? Downloaded files will be
 						kept, but once removed, continuing the transfers will require the .torrent files.</p>
 					</div>
@@ -224,11 +215,16 @@
 
 		<!-- TODO select/deselect all, move to top/bottom -->
 		<script type="text/javascript">
+
+			function showErrorMessage(msg){
+				$("#error-alert-text").text(msg);
+				$("#error-alert").show();
+			}
+			
 			var tr = new Transmission();
 			document.transmission = tr;
 			$(document).ready(function() {
-				$('#torrent-filter-select').multiselect({includeSelectAllOption: true, selectAllText: "Show all"});
-				tr.connectHandlers();
+				$('.progress .bar').progressbar();
 
 				$('#torrent_search').change('keyup click', function() {
 					tr.filter($(this).val());
@@ -264,18 +260,30 @@
 						v.deleteData();
 					});
 				});
-				/* fixme toolbar delete menu entry */
+				/* FIXME toolbar delete menu entry */
 
-				// tell jquery to copy the datatransfer property from events over if it exists
-				/* FIXME do we still need this? */
-				jquery.event.props.push("datatransfer");
+				$('#filter-state').multiselect({includeSelectAllOption: true, selectAllText: "Show all"});
+				refilter = function(ev){
+					tr.refilter($('#filter-state').val(), $("#filter-text").val());
+				};
+				$('#filter-state').change(refilter);
+				$('#filter-text').change(refilter);
 
-				/* fixme state filter */
-				/* fixme inspector window */
+				/* FIXME filtering backend */
+				/* FIXME torrent list rendering */
+				/* FIXME torrent progress bars */
+				/* FIXME move torrent progress bars into background */
+				/* FIXME inspector window */
+				/* FIXME disable buttons that would not respond? */
 
 				$('#torrent_container').bind('dragover', $.proxy(this.dragenter,this));
 				$('#torrent_container').bind('dragenter', $.proxy(this.dragenter,this));
 				$('#torrent_container').bind('drop', $.proxy(this.drop,this));
+				/* TODO paste handler */
+
+				// tell jquery to copy the datatransfer property from events over if it exists
+				/* FIXME do we still need this? */
+				jquery.event.props.push("datatransfer");
 			});
 		</script>
 	</body>
