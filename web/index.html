@@ -222,6 +222,7 @@
 			}
 			
 			var tr = new Transmission();
+			var fmt = Transmission.fmt;
 			document.transmission = tr;
 			$(document).ready(function() {
 				$('.progress .bar').progressbar();
@@ -269,6 +270,11 @@
 				$('#filter-state').change(refilter);
 				$('#filter-text').change(refilter);
 
+				tr.statusUpdate.add(function(total_up, total_down, count){
+					$('#speed-up-label').text(fmt.speedBps(total_up));
+					$('#speed-dn-label').text(fmt.speedBps(total_down));
+					$('#count-label').text(fmt.countString('Transfer','Transfers', conut) );
+				});
 				/* FIXME filtering backend */
 				/* FIXME torrent list rendering */
 				/* FIXME torrent progress bars */

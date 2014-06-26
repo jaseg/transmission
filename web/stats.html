@@ -22,7 +22,8 @@
 		<!-- custom style foo -->
 		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
 		<!-- transmission logic foo -->
-
+		<script type="text/javascript" src="js/transmission.js"></script>
+		<script type="text/javascript" src="js/stats.js"></script>
 		<title>Transmission Statistics</title>
 	</head>
 	<body>
@@ -71,5 +72,31 @@
 				<div class="col-sm-6"></div>
 			</div>
 		</div>
-	</div>
+		<script type="text/javascript">
+			function showErrorMessage(msg){
+				$("#error-alert-text").text(msg);
+				$("#error-alert").show();
+			}
+			
+			var st = new TransmissionStats();
+			st.remote.errorCallbacks.add(showErrorMessage);
+
+			var fmt = Transmission.fmt;
+			document.stats = tr;
+			$(document).ready(function() {
+				st.statsUpdated.add(function(cur, cum){
+					$('#stats-session-uploaded'		).html(fmt.size(		cur.uploadedBytes));
+					$('#stats-session-downloaded'	).html(fmt.size(		cur.downloadedBytes));
+					$('#stats-session-ratio'		).html(fmt.ratioString(	cur.ratio));
+					$('#stats-session-duration'		).html(fmt.timeInterval(cur.secondsActive));
+					$('#stats-total-uploaded'		).html(fmt.size(		cum.uploadedBytes));
+					$('#stats-total-downloaded'		).html(fmt.size(		cum.downloadedBytes));
+					$('#stats-total-ratio'			).html(fmt.ratioString(	cum.ratio));
+					$('#stats-total-duration'		).html(fmt.timeInterval(cum.secondsActive));
+					$('#stats-total-count'			).html(fmt.countString('time', 'times', cum.sessionCount));
+				});
+			});
+		</script>
+	</body>
+</html>
 

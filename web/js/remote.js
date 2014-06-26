@@ -46,7 +46,7 @@ TransmissionRemote.prototype =
 		if (!err.length)
 			err = 'Server not responding';
 
-		this.errorCallbacks.fire();
+		this.errorCallbacks.fire(err);
 	},
 
 	/* Utility functions */
@@ -132,7 +132,9 @@ TransmissionRemote.prototype =
 		this.sendTorrentSetRequests('torrent-set-location', torrent_ids, {'move': true, 'location': new_location});
 	},
 	renameTorrent: function(torrent_ids, oldpath, newname, callback) {
-		this.sendTorrentSetRequests('torrent-rename-path', torrent_ids, {'path': oldpath, 'name': newname }, callback);
+		this.sendTorrentSetRequests('torrent-rename-path', torrent_ids, {'path': oldpath, 'name': newname }, function(res){
+			callback(res.result, res.arguments);
+		});
 	},
 	removeTorrents: function(torrent_ids, callback) {
 		this.sendTorrentSetRequests('torrent-remove', torrent_ids);

@@ -23,7 +23,7 @@ Transmission.prototype =
 		var e;
 
 		// Initialize the helper classes
-		this.remote = new TransmissionRemote(this);
+		this.remote = new TransmissionRemote();
 		this.inspector = new Inspector(this, this.remote);
 
 		// Initialize the implementation fields
@@ -33,6 +33,7 @@ Transmission.prototype =
 		this.prefs			= {};
 
 		this.downloadComplete = $.Callbacks();
+		this.statusUpdate = $.Callbacks();
 
 		// Get preferences & torrents from the daemon
 		this.initializeTorrents(null);
@@ -225,19 +226,11 @@ Transmission.prototype =
 		this.remote.removeTorrentsAndData(torrents);
 	},
 
-	onTorrentRenamed: function(response) {
-		var torrent;
-		if ((response.result === 'success') &&
-		    (response.arguments) &&
-		    ((torrent = this.torrents[response.arguments.id])))
-		{
-			torrent.refresh(response.arguments);
-		}
-	},
-
 	renameTorrent: function (torrent, newname) {
-		var oldpath = torrent.getName();
-		this.remote.renameTorrent([torrent.getId()], oldpath, newname, this.onTorrentRenamed, this);
+		this.remote.renameTorrent([torrent.getId()], torrent.getName(), newname, function(result, obj){
+			if(result == 'success')
+				torrent.refresh(obj);
+		});
 	},
 
 	startAllTorrents: function() {
@@ -262,9 +255,6 @@ Transmission.prototype =
 		this.remote.verifyTorrents(this.getTorrentIds(torrents));
 	},
 
-	reannounceTorrent: function(torrent) {
-		this.reannounceTorrents([ torrent ]);
-	},
 	reannounceTorrents: function(torrents) {
 		this.remote.reannounceTorrents(this.getTorrentIds(torrents));
 	},
@@ -272,16 +262,16 @@ Transmission.prototype =
 	stopAllTorrents: function() {
 		this.stopTorrents(this.getAllTorrents());
 	},
+
 	stopSelectedTorrents: function() {
 		this.stopTorrents(this.getSelectedTorrents());
 	},
-	stopTorrent: function(torrent) {
-		this.stopTorrents([ torrent ]);
-	},
+
 	stopTorrents: function(torrents) {
 		this.remote.stopTorrents(this.getTorrentIds(torrents),
 		                         this.refreshTorrents, this);
 	},
+
 	changeFileCommand: function(torrentId, rowIndices, command) {
 		this.remote.changeFileCommand(torrentId, rowIndices, command);
 	},
@@ -292,10 +282,6 @@ Transmission.prototype =
 			    msec = delaySecs*1000 || 150;
 			scroll_timeout = setTimeout(callback,msec);
 		}
-	},
-	doToolbarHide: function() {
-		window.scrollTo(0,1);
-		scroll_timeout=null;
 	},
 
 	// Queue
@@ -371,24 +357,6 @@ Transmission.prototype =
                         	e = menu.find('#unlimited_upload_rate');
                         e.deselectMenuSiblings().selectMenuItem();
 		}
-	},
-
-	updateStatus: function()
-	{
-		var up=0, down=0,
-		    fmt = Transmission.fmt;
-
-		// up/down speed
-		this.torrents.each(function(i, t){
-			u += t.getUploadSpeed();
-			d += t.getDownloadSpeed();
-		});
-
-		$('#speed-up-label').text(fmt.speedBps(up));
-		$('#speed-dn-label').text(fmt.speedBps(down));
-
-		// visible torrents
-		$('#count-label').text(fmt.countString('Transfer','Transfers',this.visibleTorrents.length) );
 	},
 
 	/****
@@ -531,123 +499,17 @@ Transmission.prototype =
 		$(e).filter(":odd").addClass('even'); 
 		$(e).filter(":even").removeClass('even'); 
 
-		// sync gui
-		this.updateStatusbar();
+		this.statusUpdate.fire(total_up, total_down, rows.length);
 		if (old_sel_count !== $(list).children('.selected').length)
 			this.selectionChanged();
 	},
 
-	setFilterMode: function(mode)
-	{
-		// set the state
+	setFilterMode: function(mode) {
 		this.setPref(Prefs._FilterMode, mode);
-
-		// refilter
 		this.refilter(true);
 	},
 
-	onFilterModeClicked: function(ev)
-	{
+	onFilterModeClicked: function(ev) {
 		this.setFilterMode($('#filter-mode').val());
-	},
-
-	onFilterTrackerClicked: function(ev)
-	{
-		var tracker = $('#filter-tracker').val();
-		this.setFilterTracker(tracker==='all' ? null : tracker);
-	},
-
-	setFilterTracker: function(domain)
-	{
-		// update which tracker is selected in the popup
-		var key = domain ? this.getReadableDomain(domain) : 'all',
-		    id = '#show-tracker-' + key;
-		$(id).addClass('selected').siblings().removeClass('selected');
-
-		this.filterTracker = domain;
-		this.refilter(true);
-	},
-
-	// example: "tracker.ubuntu.com" returns "ubuntu.com"
-	getDomainName: function(host)
-	{
-		var dot = host.indexOf('.');
-		if (dot !== host.lastIndexOf('.'))
-			host = host.slice(dot+1);
-		return host;
-	},
-
-	// example: "ubuntu.com" returns "Ubuntu"
-	getReadableDomain: function(name)
-	{
-		if (name.length)
-			name = name.charAt(0).toUpperCase() + name.slice(1);
-		var dot = name.indexOf('.');
-		if (dot !== -1)
-			name = name.slice(0, dot);
-		return name;
-	},
-
-	/***
-	****
-	****  Statistics
-	****
-	***/
-
-	// turn the periodic ajax stats refresh on & off
-	togglePeriodicStatsRefresh: function(enabled) {
-		clearInterval(this.statsInterval);
-		delete this.statsInterval;
-		if (enabled) {
-			var callback = $.proxy(this.loadDaemonStats,this),
-                            msec = 5000;
-			this.statsInterval = setInterval(callback, msec);
-		}
-	},
-
-	loadDaemonStats: function(async) {
-		this.remote.loadDaemonStats(function(data) {
-			this.updateStats(data['arguments']);
-		}, this, async);
-	},
-
-	// Process new session stats from the server
-	updateStats: function(stats)
-	{
-		var s, ratio,
-		    fmt = Transmission.fmt;
-
-		s = stats["current-stats"];
-		ratio = Math.ratio(s.uploadedBytes,s.downloadedBytes);
-		$('#stats-session-uploaded').html(fmt.size(s.uploadedBytes));
-		$('#stats-session-downloaded').html(fmt.size(s.downloadedBytes));
-		$('#stats-session-ratio').html(fmt.ratioString(ratio));
-		$('#stats-session-duration').html(fmt.timeInterval(s.secondsActive));
-
-		s = stats["cumulative-stats"];
-		ratio = Math.ratio(s.uploadedBytes,s.downloadedBytes);
-		$('#stats-total-count').html(s.sessionCount + " times");
-		$('#stats-total-uploaded').html(fmt.size(s.uploadedBytes));
-		$('#stats-total-downloaded').html(fmt.size(s.downloadedBytes));
-		$('#stats-total-ratio').html(fmt.ratioString(ratio));
-		$('#stats-total-duration').html(fmt.timeInterval(s.secondsActive));
-	},
-
-
-	showStatsDialog: function() {
-		this.loadDaemonStats();
-		this.hideMobileAddressbar();
-		this.togglePeriodicStatsRefresh(true);
-		$('#stats-dialog').dialog({
-			close: $.proxy(this.onStatsDialogClosed,this),
-			show: 'fade',
-			hide: 'fade',
-			title: 'Statistics'
-		});
-	},
-
-	onStatsDialogClosed: function() {
-		this.hideMobileAddressbar();
-		this.togglePeriodicStatsRefresh(false);
 	}
 };
