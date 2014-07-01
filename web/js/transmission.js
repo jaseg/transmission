@@ -5,37 +5,24 @@
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
 
-function Transmission()
+function Transmission(remote, prefs)
 {
-	this.initialize();
+	this.initialize(remote, prefs);
 }
 
 Transmission.prototype =
 {
-	/****
-	*****
-	*****  STARTUP
-	*****
-	****/
-
-	initialize: function()
-	{
-		var e;
-
-		// Initialize the helper classes
-		this.remote = new TransmissionRemote();
-		this.inspector = new Inspector(this, this.remote);
-
-		// Initialize the implementation fields
+	initialize: function(remote, prefs) {
+		this.remote = remote
 		this.torrents		= {};
 		this._rows			= [];
 		this.changedTorrents= {};
-		this.prefs			= {};
+		this.prefs			= prefs.dict;
+		this.prefsThing		= prefs;
 
 		this.downloadComplete = $.Callbacks();
 		this.statusUpdate = $.Callbacks();
 
-		// Get preferences & torrents from the daemon
 		this.initializeTorrents(null);
 		this.sessionInterval = setInterval($.proxy(this.loadDaemonPrefs,this), 8000);
 	},
@@ -49,90 +36,18 @@ Transmission.prototype =
 		}, this, async);
 	},
 
-	/****
-	*****
-	*****  utilities
-	*****
-	****/
-
-	getAllTorrents: function()
-	{
+	getAllTorrents: function() {
 		return $.map(torrents.slice(0), function(t) {return t});
 	},
 
-	getTorrentIds: function(torrents)
-	{
+	getTorrentIds: function(torrents) {
 		return $.map(torrents.slice(0), function(t) {return t.getid();});
 	},
 
-	setPref: function(key, val)
-	{
+	setPref: function(key, val) {
 		this.prefs[key] = val;
 		prefs.setvalue(key, val);
 	},
-
-	/*--------------------------------------------
-	 *
-	 *  e v e n t   f u n c t i o n s
-	 *
-	 *--------------------------------------------*/
-
-	pauseresumeselected: function(ev) {
-		/* FIXME */
-	},
-
-	stopallclicked: function(ev) {
-		/* FIXME */
-	},
-
-	startallclicked: function(ev) {
-		/* FIXME */
-	},
-
-	dragenter: function(ev) {
-		if (ev.datatransfer && ev.datatransfer.types) {
-			var types = ["text/uri-list", "text/plain"];
-			for (var i = 0; i < types.length; ++i) {
-				// it would be better to look at the links here;
-				// sadly, with firefox, trying would throw.
-				if (ev.datatransfer.types.contains(types[i])) {
-					ev.stoppropagation();
-					ev.preventdefault();
-					ev.dropeffect = "copy";
-					return false;
-				}
-			}
-		}
-		else if (ev.datatransfer) {
-			ev.datatransfer.dropeffect = "none";
-		}
-		return true;
-	},
-
-	drop: function(ev) {
-		if (!ev.datatransfer || !ev.datatransfer.types)
-			return true;
-
-		/* Give text/uri-list preference over text/plain. */
-		var uris = ev.datatransfer.getData('text/uri-list') || ev.datatransfer.getData('text/plain');
-
-		var tr = this;
-		$.each(uris.split("\n"), function(i, uri){
-			if (/^#/.test(uri)) // lines which start with "#" are comments
-				continue;
-			if (/^[a-z-]+:/i.test(uri)) // close enough to a url
-				this.remote.addtorrentbyurl(uri, false); /* TODO: the paused setting was configurable */
-		}
-
-		ev.preventdefault();
-		return false;
-	},
-
-	/*--------------------------------------------
-	 *
-	 *  I N T E R F A C E   F U N C T I O N S
-	 *
-	 *--------------------------------------------*/
 
 	setSortMethod: function(sort_method) {
 		this.setPref(Prefs._SortMethod, sort_method);
@@ -146,18 +61,18 @@ Transmission.prototype =
 
 	setUploadSpeed: function(speed){
 		if(speed)
-			remote.savePrefs({RPC._UpSpeedLimit: speed,
-							  RPC._UpSpeedLimited: true});
+			remote.savePrefs({'speed-limit-up': speed,
+							  'speed-limit-up-enabled': true});
 		else
-			remote.savePrefs({RPC._UpSpeedLimited: false});
+			remote.savePrefs({'speed-limit-up-enabled': false});
 	},
 
 	setDownloadSpeed: function(speed){
 		if(speed)
-			remote.savePrefs({RPC._DownSpeedLimit: speed,
-							  RPC._DownSpeedLimited: true});
+			remote.savePrefs({'speed-limit-down': speed,
+							  'speed-limit-down-enabled': true});
 		else
-			remote.savePrefs({RPC._DownSpeedLimited: false});
+			remote.savePrefs({'speed-limit-down-enabled': false});
 	},
 
 	setNotificationsEnabled: function(yes){
@@ -190,7 +105,7 @@ Transmission.prototype =
 					tor.downloadComplete.add($.proxy(this.downloadComplete.fire, this.downloadComplete));
 					this.torrents[id] = tor;
 				}
-			}
+			});
 
 			if (needinfo.length > 0) {
 				// whee, new torrents! get their initial information.
@@ -201,7 +116,7 @@ Transmission.prototype =
 			$.each(removed, function(i, id){
 				tr.changedTorrents[id] = null;
 				delete tr.torrents[id];
-			}
+			});
 			this.refilterSoon();
 		};
 		this.remote.updateTorrents(ids, Torrent.Fields.Stats, $.proxy(callback, this));
@@ -268,8 +183,7 @@ Transmission.prototype =
 	},
 
 	stopTorrents: function(torrents) {
-		this.remote.stopTorrents(this.getTorrentIds(torrents),
-		                         this.refreshTorrents, this);
+		this.remote.stopTorrents(this.getTorrentIds(torrents), $.proxy(this.refreshTorrents, this));
 	},
 
 	changeFileCommand: function(torrentId, rowIndices, command) {
@@ -286,77 +200,16 @@ Transmission.prototype =
 
 	// Queue
 	moveTop: function() {
-		this.remote.moveTorrentsToTop(this.getSelectedTorrentIds(),
-		                              this.refreshTorrents, this);
+		this.remote.moveTorrentsToTop(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
 	},
 	moveUp: function() {
-		this.remote.moveTorrentsUp(this.getSelectedTorrentIds(),
-		                           this.refreshTorrents, this);
+		this.remote.moveTorrentsUp(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
 	},
 	moveDown: function() {
-		this.remote.moveTorrentsDown(this.getSelectedTorrentIds(),
-		                             this.refreshTorrents, this);
+		this.remote.moveTorrentsDown(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
 	},
 	moveBottom: function() {
-		this.remote.moveTorrentsToBottom(this.getSelectedTorrentIds(),
-		                                 this.refreshTorrents, this);
-	},
-
-	/***
-	****
-	***/
-
-	updateGuiFromSession: function(o)
-	{
-		var limit, limited, e, b, text,
-                    fmt = Transmission.fmt,
-                    menu = $('#settings_menu');
-
-		this.serverVersion = o.version;
-
-		this.prefsDialog.set(o);
-
-		if ('alt-speed-enabled' in o)
-		{
-			b = o['alt-speed-enabled'];
-			e = $('#turtle-button');
-			text = [ 'Click to ', (b?'disable':'enable'),
-			         ' Temporary Speed Limits (',
-			         fmt.speed(o['alt-speed-up']),
-			         ' up,',
-			         fmt.speed(o['alt-speed-down']),
-			         ' down)' ].join('');
-			e.toggleClass('selected', b);
-			e.attr('title', text);
-		}
-
-		if (this.isMenuEnabled && ('speed-limit-down-enabled' in o)
-		                       && ('speed-limit-down' in o))
-		{
-			limit = o['speed-limit-down'];
-			limited = o['speed-limit-down-enabled'];
-
-			e = menu.find('#limited_download_rate');
-                        e.html('Limit (' + fmt.speed(limit) + ')');
-
-                        if (!limited)
-                        	e = menu.find('#unlimited_download_rate');
-                        e.deselectMenuSiblings().selectMenuItem();
-		}
-
-		if (this.isMenuEnabled && ('speed-limit-up-enabled' in o)
-		                       && ('speed-limit-up' o))
-		{
-			limit = o['speed-limit-up'];
-			limited = o['speed-limit-up-enabled'];
-
-			e = menu.find('#limited_upload_rate');
-                        e.html('Limit (' + fmt.speed(limit) + ')');
-
-                        if (!limited)
-                        	e = menu.find('#unlimited_upload_rate');
-                        e.deselectMenuSiblings().selectMenuItem();
-		}
+		this.remote.moveTorrentsToBottom(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
 	},
 
 	/****
@@ -386,130 +239,67 @@ Transmission.prototype =
 
 	refilter: function(rebuildEverything)
 	{
-		var i, e, id, t, row, tmp, rows, clean_rows, dirty_rows, frag,
-		    sort_mode = this.prefs[Prefs._SortMethod],
-		    sort_direction = this.prefs[Prefs._SortDirection],
-		    filter_mode = this.prefs[Prefs._FilterMode],
-		    filter_tracker = this.filterTracker,
-		    renderer = this.torrentRenderer,
-		    list = this.elements.torrent_list,
-		    old_sel_count = $(list).children('.selected').length;
+		var sort_mode		= this.prefs[Prefs._SortMethod];
+		var sort_direction	= this.prefs[Prefs._SortDirection];
+		var filter_mode		= this.prefs[Prefs._FilterMode];
+		var list = $('#torrent_list');
 
 		this.updateFilterSelect();
 
 		clearTimeout(this.refilterTimer);
 		delete this.refilterTimer;
 
-		if (rebuildEverything) {
-			$(list).empty();
-			this._rows = [];
-			for (id in this.torrents)
-				this.dirtyTorrents[id] = true;
-		}
-
-		// rows that overlap with dirtyTorrents need to be refiltered.
-		// those that don't are 'clean' and don't need refiltering.
-		clean_rows = [];
-		dirty_rows = [];
-		for (i=0; row=this._rows[i]; ++i) {
-			if(row.getTorrentId() in this.dirtyTorrents)
-				dirty_rows.push(row);
-			else
-				clean_rows.push(row);
-		}
-
-		// remove the dirty rows from the dom
-		e = [];
-		for (i=0; row=dirty_rows[i]; ++i)
-			e.push (row.getElement());
-		$(e).detach();
-
-		// drop any dirty rows that don't pass the filter test
-		tmp = [];
-		for (i=0; row=dirty_rows[i]; ++i) {
-			id = row.getTorrentId();
-			t = this.torrents[ id ];
-			if (t && t.test(filter_mode, filter_text, filter_tracker))
-				tmp.push(row);
-			delete this.dirtyTorrents[id];
-		}
-		dirty_rows = tmp;
-
-		// make new rows for dirty torrents that pass the filter test
-		// but don't already have a row
-		for (id in this.dirtyTorrents) {
-			t = this.torrents[id];
-			if (t && t.test(filter_mode, filter_text, filter_tracker)) {
-				row = new TorrentRow(renderer, this, t);
-				e = row.getElement();
-				e.row = row;
-				dirty_rows.push(row);
-				$(e).click($.proxy(this.onRowClicked,this));
-				$(e).dblclick($.proxy(this.toggleInspector,this));
-			}
-		}
-
-		// sort the dirty rows
-		this.sortRows (dirty_rows);
-
-		// now we have two sorted arrays of rows
-		// and can do a simple two-way sorted merge.
-		rows = [];
-		var ci=0, cmax=clean_rows.length;
-		var di=0, dmax=dirty_rows.length;
-		frag = document.createDocumentFragment();
-		while (ci!=cmax || di!=dmax)
-		{
-			var push_clean;
-
-			if (ci==cmax)
-				push_clean = false;
-			else if (di==dmax)
-				push_clean = true;
-			else {
-				var c = Torrent.compareTorrents(
-				           clean_rows[ci].getTorrent(),
-				           dirty_rows[di].getTorrent(),
-				           sort_mode, sort_direction);
-				push_clean = (c < 0);
-			}
-
-			if (push_clean)
-				rows.push(clean_rows[ci++]);
-			else {
-				row = dirty_rows[di++];
-				e = row.getElement();
-				if (ci !== cmax)
-					list.insertBefore(e, clean_rows[ci].getElement());
-				else
-					frag.appendChild(e);
-				rows.push(row);
-			}
-		}
-		list.appendChild(frag);
-
-		// update our implementation fields
-		this._rows = rows;
+		var dirtyTorrents = this.dirtyTorrents;
+		if (rebuildEverything)
+			dirtyTorrents = this.torrents;
 		this.dirtyTorrents = {};
 
-		// jquery's even/odd starts with 1 not 0, so invert its logic
-		e = []
-		for (i=0; row=rows[i]; ++i)
-			e.push(row.getElement());
-		$(e).filter(":odd").addClass('even'); 
-		$(e).filter(":even").removeClass('even'); 
+		/* Get a list of all displayed rows with changed data */
+		changed = list.children('.torrent-entry').filter(function(idx, elem){
+			var torrent = dirtyTorrents[elem.torrent.getId()];
+			delete dirtyTorrents[elem.torrent.getId()];
+			return !!torrent;
+		});
+		/* Remove elements not matching the filter anymore */
+		changed.filter(function(idx, elem){
+			if(elem.torrent.test(filter_mode, filter_text))
+				return true;
+			elem.remove();
+			return false
+		});
+
+		/* Add all remaining changed torrents that match the filter */
+		var template = $('#torrent-entry-template');
+		$.each(dirtyTorrents, function(idx, tor){
+			if(!tor.test(filter_mode, filter_text))
+				return;
+			var entry = template.clone();
+			entry.children('#title').text();
+			var text = tor.getHaveStr();
+			if (!tor.isDone())
+				text += '/' + tor.getSizeWhenDoneStr();
+			entry.children('#size').text(text);
+			entry.children('#ratio').text(tor.getUploadRatioStr());
+			var progress = entry.children('#progress');
+			progress.text(tor.getProgressStr());
+			progress.attr('aria-valuenow', tor.getProgress());
+			list.append(entry);
+		});
+		
+		/* TODO if this performs too poor, perhaps re-introduce the old behavior of just sorting the changed rows and
+		 * then doing a merge */
+		list.tsort('', {sortFunction: function(a, b){
+			return Torrent.compareTorrents(a.e.torrent, b.e.torrent, this.prefs[Prefs._SortMethod],
+				this.prefs[Prefs._SortDirection]);
+		}});
 
 		this.statusUpdate.fire(total_up, total_down, rows.length);
-		if (old_sel_count !== $(list).children('.selected').length)
-			this.selectionChanged();
+		/* TODO selection stuff: if (old_sel_count !== $(list).children('.selected').length)
+			this.selectionChanged(); */
 	},
 
 	setFilterMode: function(mode) {
 		this.setPref(Prefs._FilterMode, mode);
 		this.refilter(true);
-	},
-
-	onFilterModeClicked: function(ev) {
-		this.setFilterMode($('#filter-mode').val());
 	}
 };

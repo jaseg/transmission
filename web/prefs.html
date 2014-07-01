@@ -22,6 +22,8 @@
 		<!-- custom style foo -->
 		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
 		<!-- transmission logic foo -->
+		<script type="text/javascript" src="js/transmission.js"></script>
+		<script type="text/javascript" src="js/remote.js"></script>
 
 		<title>Transmission Preferences</title>
 	</head>
@@ -69,12 +71,12 @@
 								<div class="form-group">
 									<input type="checkbox" id="seedRatioLimited"/>
 									<label for="seedRatioLimited">Stop seeding at ratio</label>
-									<input type="text" type="number" class="form-control" id="seedRatioLimit"/>
+									<input type="number" class="form-control" id="seedRatioLimit"/>
 								</div>
 								<div class="form-group">
 									<input type="checkbox" id="idle-seeding-limit-enabled"/>
 									<label for="idle-seeding-limit-enabled">Stop seeding if idle for (min)</label>
-									<input type="text" class="form-control" type="number" id="idle-seeding-limit"/>
+									<input class="form-control" type="number" id="idle-seeding-limit"/>
 								</div>
 							</form>
 						</div>
@@ -118,11 +120,11 @@
 								</div>
 								<div class="form-group">
 									<label for="alt-speed-time-begin">From</label>
-									<input type="text" type="number" class="form-control" id="alt-speed-time-begin"/>
+									<input type="text" class="form-control" id="alt-speed-time-begin"/>
 								</div>
 								<div class="form-group">
 									<label for="alt-speed-time-end">To</label>
-									<input type="text" type="number" class="form-control" id="alt-speed-time-end"/>
+									<input type="text" class="form-control" id="alt-speed-time-end"/>
 								</div>
 								<div class="form-group">
 									<label for="alt-speed-time-day">On days</label>
@@ -194,10 +196,9 @@
 							<form role="form">
 								<div class="form-group">
 									<label for="peer-port">Peer listening port:</label>
-									<div class="form-group has-warning has-feedback">
-										<label class="control-label" for="peer-port">Status: Unknown</label>
-										<input type="text" class="form-control" type="number" id="peer-port"/>
-										<span class="glyphicon glyphicon-warning-sign form-control-feedback"></span>
+									<div class="form-group has-warning has-feedback" id="port-container">
+										<label class="control-label" for="peer-port" id="port-open-label">Status unknown</label>
+										<input class="form-control" type="number" id="peer-port"/>
 									</div>
 								</div>
 								<div class="form-group">
@@ -242,6 +243,9 @@
 		</div>
 
 		<script type="text/javascript">
+			var remote = new TransmissionRemote();
+			var prefs = new TransmissionPrefs(remote);
+
 			$(document).ready(function() {
 				$("#speed-limit-up").slider({tooltip: 'always'});
 				$("#speed-limit-down").slider({tooltip: 'always'});
@@ -255,6 +259,27 @@
 						$(this).tab('show')
 					});
 				}
+
+				var checkPort = function() {
+					this.remote.checkPort(function(response) {
+						var is_open = response['arguments']['port-is-open'];
+						$('#port-open-label').text('Port is <b>' + (is_open ? 'Open' : 'Closed') + '</b>');
+						var pc = $('port-container');
+						pc.removeClass('has-warning has-error has-success');
+						pc.addClass(is_open ? 'has-success' : 'has-error');
+					});
+				};
+				$('input[type="checkbox"]').change(function(ev){
+					remote.savePref(ev.target.id, ev.target.checked);
+				});
+				$('input[type="number"]').change(function(ev){
+					var val = parseInt(ev.target.value)
+					if(val != NaN)
+						remote.savePref(ev.target.id, ev.target.checked);
+				});
+				$('input[type="text"]').change(function(ev){
+					remote.savePref(ev.target.id, ev.target.value);
+				});
 			});
 		</script>
 	</body>

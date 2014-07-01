@@ -7,7 +7,7 @@
 
 var RPC = {
 	_DaemonVersion          : 'version',
-	_Root                   : '../rpc',
+	_Root                   : '/transmission/rpc',
 };
 
 function TransmissionRemote(controller)
@@ -25,13 +25,12 @@ TransmissionRemote.prototype =
 		this._token = '';
 		this.errorCallbacks = $.Callbacks(); /* Fired when an AJAX error occurs */
 		this.torrentsCallbacks = $.Callbacks(); /* Fired when the torrent list changes */
-		this.prefsCallbacks = $.Callbacks(); /* Fired when the preferences change */
 	},
 
 	/* Display an error if an ajax request fails, and stop sending requests
 	 * or on a 409, globally set the X-Transmission-Session-Id and resend */
 	ajaxError: function(request, error_string, exception, ajaxObject) {
-		var token = request.getResponseHeader('X-Transmission-Session-Id'));
+		var token = request.getResponseHeader('X-Transmission-Session-Id');
 
 		// set the Transmission-Session-Id on a 409
 		if (request.status === 409 && token){
@@ -153,13 +152,22 @@ TransmissionRemote.prototype =
 			url = 'magnet:?xt=urn:btih:'+url;
 		this.rpcCall('torrent-add', {'paused': paused, 'filename': url});
 	},
-	savePrefs: function(args) {
-		this.rpcCall('session-set', args);
-		this.prefsCallbacks.fire();
+	savePrefs: function(args, callback) {
+		console.log("savePrefs called (disabled for debugging)");
+		/* FIXME DISABLED FOR TESTING
+		this.rpcCall('session-set', args, callback);
+		*/
+	},
+	savePref: function(name, value, callback){
+		console.log("savePref called (disabled for debugging)");
+		/* FIXME DISABLED FOR TESTING
+		var prefs = {};
+		prefs[name] = value;
+		this.savePrefs(prefs, callback);
+		*/
 	},
 	updateBlocklist: function() {
 		this.rpcCall('blocklist-update', {});
-		this.prefsCallbacks.fire();
 	},
 
 	// Added queue calls

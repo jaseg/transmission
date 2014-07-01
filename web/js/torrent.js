@@ -237,6 +237,7 @@ Torrent.prototype =
 	getPieceCount: function() { return this.fields.pieceCount; },
 	getPieceSize: function() { return this.fields.pieceSize; },
 	getPrivateFlag: function() { return this.fields.isPrivate; },
+	getProgress: function() { return this.fields.percentDone; },
 	getQueuePosition: function() { return this.fields.queuePosition; },
 	getRecheckProgress: function() { return this.fields.recheckProgress; },
 	getSeedRatioLimit: function() { return this.fields.seedRatioLimit; },
@@ -261,8 +262,10 @@ Torrent.prototype =
 	isDone: function() { return this.getLeftUntilDone() < 1; },
 	needsMetaData: function(){ return this.getMetadataPercentComplete() < 1; },
 	getActivity: function() { return this.getDownloadSpeed() + this.getUploadSpeed(); },
-	getPercentDoneStr: function() { return Transmission.fmt.percentString(100*this.getPercentDone()); },
-	getPercentDone: function() { return this.fields.percentDone; },
+	getProgressStr: function() { return Transmission.fmt.percentString(100*this.getProgress()); },
+	getUploadRatioStr: function() { return Transmission.fmt.ratioString(this.getUploadRatio()); },
+	getHaveStr: function() { return Transmission.fmt.size(this.getHave()); },
+	getSizeWhenDoneStr: function() { return Transmission.fmt.size(this.getSizeWhenDoneStr()); },
 	getStateString: function() {
 		switch(this.getStatus()) {
 			case Torrent._StatusStopped:        return this.isFinished() ? 'Seeding complete' : 'Paused';
@@ -340,25 +343,9 @@ Torrent.prototype =
 		}
 	},
 
-	/**
-	 * @param filter one of Prefs._Filter*
-	 * @param search substring to look for, or null
-	 * @return true if it passes the test, false if it fails
-	 */
-	test: function(state, search, tracker)
-	{
-		// flter by state...
-		var pass = this.testState(state);
-
-		// maybe filter by text...
-		if (pass && search && search.length)
-			pass = this.getCollatedName().indexOf(search.toLowerCase()) !== -1;
-
-		// maybe filter by tracker...
-		if (pass && tracker && tracker.length)
-			pass = this.getCollatedTrackers().indexOf(tracker) !== -1;
-
-		return pass;
+	/* Filter for torrent state and search term. Both arguments are optional. */
+	test: function(state, search) {
+		return this.testState(state) && (!search || this.getCollatedName().indexOf(search.toLowerCase()) !== -1);
 	}
 };
 
@@ -414,26 +401,23 @@ Torrent.compareByRatio = function(ta, tb)
 };
 Torrent.compareByProgress = function(ta, tb)
 {
-	var a = ta.getPercentDone(),
-	    b = tb.getPercentDone();
+	var a = ta.getProgress(),
+	    b = tb.getProgress();
 
 	return (a - b) || Torrent.compareByRatio(ta, tb);
 };
 
-Torrent.compareBySize = function(ta, tb)
-{
+Torrent.compareBySize = function(ta, tb) {
     var a = ta.getTotalSize(),
         b = tb.getTotalSize();
 
     return (a - b) || Torrent.compareByName(ta, tb);
 }
 
-Torrent.compareTorrents = function(a, b, sortMethod, sortDirection)
-{
+Torrent.compareTorrents = function(a, b, sortMethod, sortDirection) {
 	var i;
 
-	switch(sortMethod)
-	{
+	switch(sortMethod) {
 		case Prefs._SortByActivity:
 			i = Torrent.compareByActivity(a,b);
 			break;
@@ -461,9 +445,9 @@ Torrent.compareTorrents = function(a, b, sortMethod, sortDirection)
 	}
 
 	if (sortDirection === Prefs._SortDescending)
-		i = -i;
-
-	return i;
+		return -i;
+	else
+		return i;
 };
 
 /**

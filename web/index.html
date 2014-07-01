@@ -10,6 +10,7 @@
 		<link rel="apple-touch-icon" href="./images/webclip-icon.png"/>
 		<!-- jquery -->
 		<script type="text/javascript" src="./js/jquery/jquery-1.11.1.min.js"></script>
+		<script type="text/javascript" src="./js/jquery.tinysort.min.js"></script>
 		<!-- bootstrap -->
 		<script type="text/javascript" src="js/bootstrap.min.js"></script>
 		<link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
@@ -19,7 +20,9 @@
 		<!-- custom style foo -->
 		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
 		<!-- transmission logic foo -->
-
+		<script type="text/javascript" src="js/remote.js"></script>
+		<script type="text/javascript" src="js/torrent.js"></script>
+		<script type="text/javascript" src="js/transmission.js"></script>
 		<title>Transmission Web Interface</title>
 	</head>
 	<body id="transmission_body">
@@ -158,12 +161,13 @@
 
 		<div class="container" id="torrent_container">
 			<ul class="list-group" id="torrent_list">
-				<li class="list-group-item" id="torrent-entry-template">
+				<li class="list-group-item torrent-entry" id="torrent-entry-template" style="display: none;">
 					<span class="h4" id="title">Torrent title</span>
 					<span id="size">42/623MB</span>
 					<span class="badge" style="margin-right: 15px"><span id="ratio">23.5</span>×</span>
 					<div class="progress torrent-progress-bar">
-						<div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+						<div id="progress" class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0"
+							aria-valuemax="1" style="width: 60%;">
 							60%
 						</div>
 					</div>
@@ -221,7 +225,8 @@
 				$("#error-alert").show();
 			}
 			
-			var tr = new Transmission();
+			var remote = new TransmissionRemote();
+			var tr = new Transmission(remote);
 			var fmt = Transmission.fmt;
 			document.transmission = tr;
 			$(document).ready(function() {
@@ -270,17 +275,48 @@
 				$('#filter-state').change(refilter);
 				$('#filter-text').change(refilter);
 
+				$('#torrent_container').bind('dragenter', function(ev) {
+					if (ev.datatransfer) {
+						// it would be better to look at the links here;
+						// sadly, with firefox, trying would throw.
+						var types = ev.datatransfer.types;
+						if (types.contains('text/uri-list') || types.contains('text/plain')) {
+							ev.stoppropagation();
+							ev.preventdefault();
+							ev.dropeffect = "copy";
+							return false;
+						}
+						ev.datatransfer.dropeffect = "none";
+					}
+					return true;
+				});
+
+				$('#torrent_container').bind('drop', function(ev) {
+					if (!ev.datatransfer || !ev.datatransfer.types)
+						return true;
+
+					/* Give text/uri-list preference over text/plain. */
+					var uris = ev.datatransfer.getData('text/uri-list') || ev.datatransfer.getData('text/plain');
+
+					$.each(uris.split("\n"), function(i, uri){
+						// FIXME why was the following check there?
+						//if (/^[a-z-]+:/i.test(uri)) // close enough to a url
+						remote.addtorrentbyurl(uri, tr.prefs['start-added-torrents']);
+					});
+
+					ev.preventdefault();
+					return false;
+				});
+
 				tr.statusUpdate.add(function(total_up, total_down, count){
 					$('#speed-up-label').text(fmt.speedBps(total_up));
 					$('#speed-dn-label').text(fmt.speedBps(total_down));
 					$('#count-label').text(fmt.countString('Transfer','Transfers', conut) );
 				});
-				/* FIXME filtering backend */
-				/* FIXME torrent list rendering */
-				/* FIXME torrent progress bars */
-				/* FIXME move torrent progress bars into background */
+				/* FIXME sort & filter inputs */
 				/* FIXME inspector window */
-				/* FIXME disable buttons that would not respond? */
+				/* TODO move torrent progress bars into element background */
+				/* TODO disable buttons that would not respond? */
 
 				$('#torrent_container').bind('dragover', $.proxy(this.dragenter,this));
 				$('#torrent_container').bind('dragenter', $.proxy(this.dragenter,this));

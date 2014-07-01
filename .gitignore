@@ -1,6 +1,10 @@
 *.a
 *.lo
 *.o
+*.swo
+*.swp
+*.swn
+*.swm
 .deps/
 /INSTALL
 /aclocal.m4
