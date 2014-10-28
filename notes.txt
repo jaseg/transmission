@@ -2,3 +2,5 @@
 * Removed option to ask for free space on arbitrary host dir for security
 * Removed "seeding completed" desktop notifications because who needs that stuff anyway
 * Removed alternative speed limits for now
+
+* Added prefs "filter", "sort-method" and "sort-direction" to the remote interface

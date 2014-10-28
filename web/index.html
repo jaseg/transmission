@@ -11,6 +11,7 @@
 		<!-- jquery -->
 		<script type="text/javascript" src="./js/jquery/jquery-1.11.1.min.js"></script>
 		<script type="text/javascript" src="./js/jquery.tinysort.min.js"></script>
+		<script type="text/javascript" src="./js/jquery/jqueryui-1.8.16.min.js"></script>
 		<!-- bootstrap -->
 		<script type="text/javascript" src="js/bootstrap.min.js"></script>
 		<link rel="stylesheet" href="css/bootstrap.min.css" type="text/css"/>
@@ -21,8 +22,10 @@
 		<link rel="stylesheet" href="css/custom.css" type="text/css"/>
 		<!-- transmission logic foo -->
 		<script type="text/javascript" src="js/remote.js"></script>
+		<script type="text/javascript" src="js/prefs.js"></script>
 		<script type="text/javascript" src="js/torrent.js"></script>
 		<script type="text/javascript" src="js/transmission.js"></script>
+		<script type="text/javascript" src="js/formatter.js"></script> <!-- FIXME -->
 		<title>Transmission Web Interface</title>
 	</head>
 	<body id="transmission_body">
@@ -160,15 +163,15 @@
 		</nav>
 
 		<div class="container" id="torrent_container">
-			<ul class="list-group" id="torrent_list">
+			<ul class="list-group" id="torrent-list">
 				<li class="list-group-item torrent-entry" id="torrent-entry-template" style="display: none;">
 					<span class="h4" id="title">Torrent title</span>
 					<span id="size">42/623MB</span>
 					<span class="badge" style="margin-right: 15px"><span id="ratio">23.5</span>×</span>
 					<div class="progress torrent-progress-bar">
-						<div id="progress" class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0"
-							aria-valuemax="1" style="width: 60%;">
-							60%
+						<div id="progress"> <!-- class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0"
+							aria-valuemax="100" style="width: 60%;"-->
+							1337%
 						</div>
 					</div>
 				</li>
@@ -226,11 +229,13 @@
 			}
 			
 			var remote = new TransmissionRemote();
-			var tr = new Transmission(remote);
+			var prefs = new TransmissionPrefs(remote);
+			var tr = new Transmission(remote, prefs);
 			var fmt = Transmission.fmt;
 			document.transmission = tr;
+
 			$(document).ready(function() {
-				$('.progress .bar').progressbar();
+				var torrentList = $('#torrent-list');
 
 				$('#torrent_search').change('keyup click', function() {
 					tr.filter($(this).val());
@@ -301,18 +306,97 @@
 					$.each(uris.split("\n"), function(i, uri){
 						// FIXME why was the following check there?
 						//if (/^[a-z-]+:/i.test(uri)) // close enough to a url
-						remote.addtorrentbyurl(uri, tr.prefs['start-added-torrents']);
+						remote.addtorrentbyurl(uri, prefs.dict['start-added-torrents']);
 					});
 
 					ev.preventdefault();
 					return false;
 				});
 
-				tr.statusUpdate.add(function(total_up, total_down, count){
+				var TorrentRow = function(tor){
+					var template = $('#torrent-entry-template');
+					var torrent = tor;
+					var entry = template.clone();
+					var progressbar = entry.find('#progress');
+					progressbar.progressbar({value: 23});
+
+					var update = function(){
+						entry.children('#title').text(torrent.getName());
+
+						var text = torrent.getSizeWhenDoneStr();
+						if (!torrent.isDone())
+							text = torrent.getHaveStr() +'/'+ text;
+						entry.children('#size').text(text);
+
+						entry.children('#ratio').text(torrent.getUploadRatioStr());
+
+						progressbar.text(torrent.getProgressStr());
+						console.log(progressbar);
+						progressbar.progressbar("option", "value", torrent.getProgress());
+					};
+
+					update();
+					entry.show();
+					torrentList.append(entry);
+				};
+
+				var set_status = function(total_up, total_down, count){
 					$('#speed-up-label').text(fmt.speedBps(total_up));
 					$('#speed-dn-label').text(fmt.speedBps(total_down));
 					$('#count-label').text(fmt.countString('Transfer','Transfers', conut) );
-				});
+				};
+
+				var refilter = function(rebuildEverything) {
+					var filter_mode = prefs.get('filter');
+
+					this.updateFilterSelect();
+
+					clearTimeout(this.refilterTimer);
+					delete this.refilterTimer;
+
+					var dirtyTorrents = this.dirtyTorrents;
+					if (rebuildEverything)
+						dirtyTorrents = this.torrents;
+					this.dirtyTorrents = {};
+
+					/* Get a list of all displayed rows with changed data */
+					changed = torrentList.children('.torrent-entry').filter(function(idx, elem){
+						var torrent = dirtyTorrents[elem.torrent.getId()];
+						delete dirtyTorrents[elem.torrent.getId()];
+						return !!torrent;
+					});
+					/* Remove elements not matching the filter anymore */
+					changed.filter(function(idx, elem){
+						if(elem.torrent.test(filter_mode, filter_text))
+							return true;
+						elem.remove();
+						return false
+					});
+
+					/* Add all remaining changed torrents that match the filter */
+					$.each(dirtyTorrents, function(idx, tor){
+						if(!tor.test(filter_mode, filter_text))
+							return;
+						TorrentRow(tor);
+					});
+					
+					/* TODO if this performs too poor, perhaps re-introduce the old behavior of just sorting the changed rows and
+					 * then doing a merge */
+					/*torrentList.tsort('', {sortFunction: function(a, b){
+						return Torrent.compareTorrents(a.e.torrent, b.e.torrent, prefs.get('sort-method'),
+							prefs.get('sort-direction'));
+					}});*/
+
+					set_status(total_up, total_down, rows.length);
+					/* TODO selection stuff: if (old_sel_count !== $(list).children('.selected').length)
+						this.selectionChanged(); */
+				};
+
+				var setFilterMode = function(mode) {
+					tr.set('filter', mode);
+					refilter(true);
+				}
+
 				/* FIXME sort & filter inputs */
 				/* FIXME inspector window */
 				/* TODO move torrent progress bars into element background */
@@ -323,9 +407,16 @@
 				$('#torrent_container').bind('drop', $.proxy(this.drop,this));
 				/* TODO paste handler */
 
-				// tell jquery to copy the datatransfer property from events over if it exists
-				/* FIXME do we still need this? */
-				jquery.event.props.push("datatransfer");
+				document.transmission.torrentsChanged.add(function(changedTorrents){
+					console.log("UI update:", changedTorrents);
+					$.each(changedTorrents, function(i, tor){
+						if(tor.uiEntry == null){
+							tor.uiEntry = new TorrentRow(tor);
+						}else{
+							tor.uiEntry.update();
+						}
+					});
+				});
 			});
 		</script>
 	</body>

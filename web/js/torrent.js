@@ -1,20 +1,9 @@
 /**
- * Copyright © Mnemosyne LLC
+ * Copyright 2014 © Mnemosyne LLC and Sebastian Götte
  *
  * This file is licensed under the GPLv2.
  * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
  */
-
-function Torrent(data)
-{
-	this.initialize(data);
-}
-
-/***
-****
-****  Constants
-****
-***/
 
 // Torrent.fields.status
 Torrent._StatusStopped         = 0;
@@ -65,6 +54,8 @@ Torrent.Fields.Stats = [
 	'isStalled',
 	'leftUntilDone',
 	'metadataPercentComplete',
+	'haveUnchecked',
+	'haveValid',
 	'peersConnected',
 	'peersGettingFromUs',
 	'peersSendingToUs',
@@ -103,31 +94,14 @@ Torrent.Fields.StatsExtra = [
 	'desiredAvailable',
 	'downloadedEver',
 	'fileStats',
-	'haveUnchecked',
-	'haveValid',
 	'peers',
 	'startDate',
 	'trackerStats'
 ];
 
-/***
-****
-****  Methods
-****
-***/
-
-Torrent.prototype =
+function Torrent(data)
 {
-	initialize: function(data)
-	{
-		this.fields = {};
-		this.refresh (data);
-		this.dataChanged = $.Callbacks();
-		this.statusChanged = $.Callbacks();
-		this.downloadComplete = $.Callbacks();
-	},
-
-	setField: function(o, name, value)
+	this.setField = function(o, name, value)
 	{
 		var i, observer;
 		
@@ -140,10 +114,10 @@ Torrent.prototype =
 		}
 		o[name] = value;
 		return true;
-	},
+	};
 
 	// fields.files is an array of unions of RPC's "files" and "fileStats" objects.
-	updateFiles: function(files)
+	this.updateFiles = function(files)
 	{
 		var changed = false,
 		    myfiles = this.fields.files || [],
@@ -159,18 +133,18 @@ Torrent.prototype =
 		}
 		this.fields.files = myfiles;
 		return changed;
-	},
+	};
 
-	collateTrackers: function(trackers)
+	this.collateTrackers = function(trackers)
 	{
 		var i, t, announces = [];
 
 		for (i=0; t=trackers[i]; ++i)
 			announces.push(t.announce.toLowerCase());
 		return announces.join('\t');
-	},
+	};
 
-	refreshFields: function(data)
+	this.refreshFields = function(data)
 	{
 		var key,
 		    changed = false;
@@ -194,79 +168,75 @@ Torrent.prototype =
 		}
 
 		return changed;
-	},
+	};
 
-	refresh: function(data)
+	this.refresh = function(data)
 	{
 		if (this.refreshFields(data))
 			this.dataChanged.fire(this);
-	},
-
-	/****
-	*****
-	****/
+	};
 
 	// simple accessors
-	getComment: function() { return this.fields.comment; },
-	getCreator: function() { return this.fields.creator; },
-	getDateAdded: function() { return this.fields.addedDate; },
-	getDateCreated: function() { return this.fields.dateCreated; },
-	getDesiredAvailable: function() { return this.fields.desiredAvailable; },
-	getDownloadDir: function() { return this.fields.downloadDir; },
-	getDownloadSpeed: function() { return this.fields.rateDownload; },
-	getDownloadedEver: function() { return this.fields.downloadedEver; },
-	getError: function() { return this.fields.error; },
-	getErrorString: function() { return this.fields.errorString; },
-	getETA: function() { return this.fields.eta; },
-	getFailedEver: function(i) { return this.fields.corruptEver; },
-	getFile: function(i) { return this.fields.files[i]; },
-	getFileCount: function() { return this.fields.files ? this.fields.files.length : 0; },
-	getHashString: function() { return this.fields.hashString; },
-	getHave: function() { return this.getHaveValid() + this.getHaveUnchecked() },
-	getHaveUnchecked: function() { return this.fields.haveUnchecked; },
-	getHaveValid: function() { return this.fields.haveValid; },
-	getId: function() { return this.fields.id; },
-	getLastActivity: function() { return this.fields.activityDate; },
-	getLeftUntilDone: function() { return this.fields.leftUntilDone; },
-	getMetadataPercentComplete: function() { return this.fields.metadataPercentComplete; },
-	getName: function() { return this.fields.name || 'Unknown'; },
-	getPeers: function() { return this.fields.peers; },
-	getPeersConnected: function() { return this.fields.peersConnected; },
-	getPeersGettingFromUs: function() { return this.fields.peersGettingFromUs; },
-	getPeersSendingToUs: function() { return this.fields.peersSendingToUs; },
-	getPieceCount: function() { return this.fields.pieceCount; },
-	getPieceSize: function() { return this.fields.pieceSize; },
-	getPrivateFlag: function() { return this.fields.isPrivate; },
-	getProgress: function() { return this.fields.percentDone; },
-	getQueuePosition: function() { return this.fields.queuePosition; },
-	getRecheckProgress: function() { return this.fields.recheckProgress; },
-	getSeedRatioLimit: function() { return this.fields.seedRatioLimit; },
-	getSeedRatioMode: function() { return this.fields.seedRatioMode; },
-	getSizeWhenDone: function() { return this.fields.sizeWhenDone; },
-	getStartDate: function() { return this.fields.startDate; },
-	getStatus: function() { return this.fields.status; },
-	getTotalSize: function() { return this.fields.totalSize; },
-	getTrackers: function() { return this.fields.trackers; },
-	getUploadSpeed: function() { return this.fields.rateUpload; },
-	getUploadRatio: function() { return this.fields.uploadRatio; },
-	getUploadedEver: function() { return this.fields.uploadedEver; },
-	getWebseedsSendingToUs: function() { return this.fields.webseedsSendingToUs; },
-	isFinished: function() { return this.fields.isFinished; },
+	this.getComment = function() { return this.fields.comment; };
+	this.getCreator = function() { return this.fields.creator; };
+	this.getDateAdded = function() { return this.fields.addedDate; };
+	this.getDateCreated = function() { return this.fields.dateCreated; };
+	this.getDesiredAvailable = function() { return this.fields.desiredAvailable; };
+	this.getDownloadDir = function() { return this.fields.downloadDir; };
+	this.getDownloadSpeed = function() { return this.fields.rateDownload; };
+	this.getDownloadedEver = function() { return this.fields.downloadedEver; };
+	this.getError = function() { return this.fields.error; };
+	this.getErrorString = function() { return this.fields.errorString; };
+	this.getETA = function() { return this.fields.eta; };
+	this.getFailedEver = function(i) { return this.fields.corruptEver; };
+	this.getFile = function(i) { return this.fields.files[i]; };
+	this.getFileCount = function() { return this.fields.files ? this.fields.files.length : 0; };
+	this.getHashString = function() { return this.fields.hashString; };
+	this.getHave = function() { return this.getHaveValid() + this.getHaveUnchecked() };
+	this.getHaveUnchecked = function() { return this.fields.haveUnchecked; };
+	this.getHaveValid = function() { return this.fields.haveValid; };
+	this.getId = function() { return this.fields.id; };
+	this.getLastActivity = function() { return this.fields.activityDate; };
+	this.getLeftUntilDone = function() { return this.fields.leftUntilDone; };
+	this.getMetadataPercentComplete = function() { return this.fields.metadataPercentComplete; };
+	this.getName = function() { return this.fields.name || 'Unknown'; };
+	this.getPeers = function() { return this.fields.peers; };
+	this.getPeersConnected = function() { return this.fields.peersConnected; };
+	this.getPeersGettingFromUs = function() { return this.fields.peersGettingFromUs; };
+	this.getPeersSendingToUs = function() { return this.fields.peersSendingToUs; };
+	this.getPieceCount = function() { return this.fields.pieceCount; };
+	this.getPieceSize = function() { return this.fields.pieceSize; };
+	this.getPrivateFlag = function() { return this.fields.isPrivate; };
+	this.getProgress = function() { return this.fields.percentDone; };
+	this.getQueuePosition = function() { return this.fields.queuePosition; };
+	this.getRecheckProgress = function() { return this.fields.recheckProgress; };
+	this.getSeedRatioLimit = function() { return this.fields.seedRatioLimit; };
+	this.getSeedRatioMode = function() { return this.fields.seedRatioMode; };
+	this.getSizeWhenDone = function() { return this.fields.sizeWhenDone; };
+	this.getStartDate = function() { return this.fields.startDate; };
+	this.getStatus = function() { return this.fields.status; };
+	this.getTotalSize = function() { return this.fields.totalSize; };
+	this.getTrackers = function() { return this.fields.trackers; };
+	this.getUploadSpeed = function() { return this.fields.rateUpload; };
+	this.getUploadRatio = function() { return this.fields.uploadRatio; };
+	this.getUploadedEver = function() { return this.fields.uploadedEver; };
+	this.getWebseedsSendingToUs = function() { return this.fields.webseedsSendingToUs; };
+	this.isFinished = function() { return this.fields.isFinished; };
 
 	// derived accessors
-	hasExtraInfo: function() { return 'hashString' in this.fields; },
-	isSeeding: function() { return this.getStatus() === Torrent._StatusSeed; },
-	isStopped: function() { return this.getStatus() === Torrent._StatusStopped; },
-	isChecking: function() { return this.getStatus() === Torrent._StatusCheck; },
-	isDownloading: function() { return this.getStatus() === Torrent._StatusDownload; },
-	isDone: function() { return this.getLeftUntilDone() < 1; },
-	needsMetaData: function(){ return this.getMetadataPercentComplete() < 1; },
-	getActivity: function() { return this.getDownloadSpeed() + this.getUploadSpeed(); },
-	getProgressStr: function() { return Transmission.fmt.percentString(100*this.getProgress()); },
-	getUploadRatioStr: function() { return Transmission.fmt.ratioString(this.getUploadRatio()); },
-	getHaveStr: function() { return Transmission.fmt.size(this.getHave()); },
-	getSizeWhenDoneStr: function() { return Transmission.fmt.size(this.getSizeWhenDoneStr()); },
-	getStateString: function() {
+	this.hasExtraInfo = function() { return 'hashString' in this.fields; };
+	this.isSeeding = function() { return this.getStatus() === Torrent._StatusSeed; };
+	this.isStopped = function() { return this.getStatus() === Torrent._StatusStopped; };
+	this.isChecking = function() { return this.getStatus() === Torrent._StatusCheck; };
+	this.isDownloading = function() { return this.getStatus() === Torrent._StatusDownload; };
+	this.isDone = function() { return this.getLeftUntilDone() < 1; };
+	this.needsMetaData = function(){ return this.getMetadataPercentComplete() < 1; };
+	this.getActivity = function() { return this.getDownloadSpeed() + this.getUploadSpeed(); };
+	this.getProgressStr = function() { return Transmission.fmt.percentString(100*this.getProgress()); };
+	this.getUploadRatioStr = function() { return Transmission.fmt.ratioString(this.getUploadRatio()); };
+	this.getHaveStr = function() { return Transmission.fmt.size(this.getHave()); };
+	this.getSizeWhenDoneStr = function() { return Transmission.fmt.size(this.getSizeWhenDone()); };
+	this.getStateString = function() {
 		switch(this.getStatus()) {
 			case Torrent._StatusStopped:        return this.isFinished() ? 'Seeding complete' : 'Paused';
 			case Torrent._StatusCheckWait:      return 'Queued for verification';
@@ -279,15 +249,17 @@ Torrent.prototype =
 			case undefined:                     return 'Unknown';
 			default:                            return 'Error';
 		}
-	},
-	seedRatioLimit: function(controller){
+	};
+
+	this.seedRatioLimit = function(controller){
 		switch(this.getSeedRatioMode()) {
 			case Torrent._RatioUseGlobal: return controller.seedRatioLimit();
 			case Torrent._RatioUseLocal:  return this.getSeedRatioLimit();
 			default:                      return -1;
 		}
-	},
-	getErrorMessage: function() {
+	};
+
+	this.getErrorMessage = function() {
 		var str = this.getErrorString();
 		switch(this.getError()) {
 			case Torrent._ErrTrackerWarning:
@@ -299,25 +271,23 @@ Torrent.prototype =
 			default:
 				return null;
 		}
-	},
-	getCollatedName: function() {
+	};
+
+	this.getCollatedName = function() {
 		var f = this.fields;
 		if (!f.collatedName && f.name)
 			f.collatedName = f.name.toLowerCase();
 		return f.collatedName || '';
-	},
-	getCollatedTrackers: function() {
+	};
+
+	this.getCollatedTrackers = function() {
 		var f = this.fields;
 		if (!f.collatedTrackers && f.trackers)
 			f.collatedTrackers = this.collateTrackers(f.trackers);
 		return f.collatedTrackers || '';
-	},
+	};
 
-	/****
-	*****
-	****/
-
-	testState: function(state)
+	this.testState = function(state)
 	{
 		var s = this.getStatus();
 
@@ -341,12 +311,20 @@ Torrent.prototype =
 			default:
 				return true;
 		}
-	},
+	};
 
 	/* Filter for torrent state and search term. Both arguments are optional. */
-	test: function(state, search) {
+	this.test = function(state, search) {
 		return this.testState(state) && (!search || this.getCollatedName().indexOf(search.toLowerCase()) !== -1);
-	}
+	};
+
+	this.fields = {};
+	this.dataChanged = $.Callbacks();
+	this.statusChanged = $.Callbacks();
+	this.downloadComplete = $.Callbacks();
+	this.uiEntry = null;
+
+	this.refresh(data);
 };
 
 

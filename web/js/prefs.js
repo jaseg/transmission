@@ -6,12 +6,8 @@
  */
 
 function TransmissionPrefs(remote) {
-		this.initialize(remote);
-}
-
-TransmissionPrefs.prototype = {
 	// all the RPC session keys that we have gui controls for
-	keys: [
+	this.keys = [
 		'alt-speed-down',
 		'alt-speed-time-begin',
 		'alt-speed-time-day',
@@ -41,40 +37,39 @@ TransmissionPrefs.prototype = {
 		'speed-limit-up',
 		'speed-limit-up-enabled',
 		'start-added-torrents',
-		'utp-enabled'
-	],
+		'utp-enabled',
+		'sort-method',
+		'sort-direction',
+		'filter'
+	];
 
-	// map of keys that are enabled only if a 'parent' key is enabled
-	groups: {
-		'alt-speed-time-enabled': ['alt-speed-time-begin',
-								   'alt-speed-time-day',
-								   'alt-speed-time-end' ],
-		'blocklist-enabled': ['blocklist-url',
-							  'blocklist-update-button' ],
-		'idle-seeding-limit-enabled': [ 'idle-seeding-limit' ],
-		'seedRatioLimited': [ 'seedRatioLimit' ],
-		'speed-limit-down-enabled': [ 'speed-limit-down' ],
-		'speed-limit-up-enabled': [ 'speed-limit-up' ]
-	}
-
-	initialize: function (remote) {
-        this.remote = remote;
-		this.populate();
-		this.dict = {};
-		this.updateCallbacks = $.Callbacks(); /* Fired when the preferences change */
-    },
-
-	populate: function() {
+	this.populate = function() {
 		var po = this;
 		this.remote.loadDaemonPrefs(function(o){
 			$.merge(po.dict, o);
 		});
-	},
+	};
 
-	setPref: function(key, value) {
-        data.remote.savePref(o, $.proxy(function(){
+	this.get = function(key){
+		return this.dict[key];
+	};
+
+	this.set = function(key, value) {
+		data.remote.savePref(o, $.proxy(function(){
 			this.dict[key] = value;
 			this.updateCallbacks.fire();
 		}, this));
-    }
-};
+	};
+
+	this.setAll = function(prefs) {
+		data.remote.savePref(o, $.proxy(function(){
+			$.merge(this.dict, prefs);
+			this.updateCallbacks.fire();
+		}, this));
+	};
+	
+	this.remote = remote;
+	this.dict = {};
+	this.updateCallbacks = $.Callbacks(); /* Fired when the preferences change */
+	this.populate();
+}

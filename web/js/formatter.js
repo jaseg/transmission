@@ -34,18 +34,22 @@ Transmission.fmt = (function()
 		 *   Format a percentage to a string
 		 */
 		percentString: function(x) {
+			if (x === undefined)
+				return "undefined";
 			if (x < 10.0)
-				return x.toTruncFixed(2);
+				return x.toFixed(2);
 			else if (x < 100.0)
-				return x.toTruncFixed(1);
+				return x.toFixed(1);
 			else
-				return x.toTruncFixed(0);
+				return x.toFixed(0);
 		},
 
 		/*
 		 *   Format a ratio to a string
 		 */
 		ratioString: function(x) {
+			if (x === undefined)
+				return "undefined";
 			if (x === -1)
 				return "None";
 			if (x === -2)
@@ -53,11 +57,6 @@ Transmission.fmt = (function()
 			return this.percentString(x);
 		},
 
-		/**
-		 * Formats the a memory size into a human-readable string
-		 * @param {Number} bytes the filesize in bytes
-		 * @return {String} human-readable string
-		 */
 		mem: function(bytes)
 		{
 			if (bytes < mem_K)
@@ -88,15 +87,10 @@ Transmission.fmt = (function()
 			}
 
 			// try to have at least 3 digits and at least 1 decimal
-			return convertedSize <= 9.995 ? [ convertedSize.toTruncFixed(2), unit ].join(' ')
-			                              : [ convertedSize.toTruncFixed(1), unit ].join(' ');
+			return convertedSize <= 9.995 ? [ convertedSize.toFixed(2), unit ].join(' ')
+			                              : [ convertedSize.toFixed(1), unit ].join(' ');
 		},
 
-		/**
-		 * Formats the a disk capacity or file size into a human-readable string
-		 * @param {Number} bytes the filesize in bytes
-		 * @return {String} human-readable string
-		 */
 		size: function(bytes)
 		{
 			if (bytes < size_K)
@@ -127,8 +121,8 @@ Transmission.fmt = (function()
 			}
 
 			// try to have at least 3 digits and at least 1 decimal
-			return convertedSize <= 9.995 ? [ convertedSize.toTruncFixed(2), unit ].join(' ')
-			                              : [ convertedSize.toTruncFixed(1), unit ].join(' ');
+			return convertedSize <= 9.995 ? [ convertedSize.toFixed(2), unit ].join(' ')
+			                              : [ convertedSize.toFixed(1), unit ].join(' ');
 		},
 
 		speedBps: function(Bps)
@@ -146,18 +140,18 @@ Transmission.fmt = (function()
 			var speed = KBps;
 
 			if (speed <= 999.95) // 0 KBps to 999 K
-				return [ speed.toTruncFixed(0), speed_K_str ].join(' ');
+				return [ speed.toFixed(0), speed_K_str ].join(' ');
 
 			speed /= speed_K;
 
 			if (speed <= 99.995) // 1 M to 99.99 M
-				return [ speed.toTruncFixed(2), speed_M_str ].join(' ');
+				return [ speed.toFixed(2), speed_M_str ].join(' ');
 			if (speed <= 999.95) // 100 M to 999.9 M
-				return [ speed.toTruncFixed(1), speed_M_str ].join(' ');
+				return [ speed.toFixed(1), speed_M_str ].join(' ');
 
 			// insane speeds
 			speed /= speed_K;
-			return [ speed.toTruncFixed(2), speed_G_str ].join(' ');
+			return [ speed.toFixed(2), speed_G_str ].join(' ');
 		},
 
 		timeInterval: function(seconds)

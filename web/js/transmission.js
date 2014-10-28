@@ -7,299 +7,190 @@
 
 function Transmission(remote, prefs)
 {
-	this.initialize(remote, prefs);
-}
-
-Transmission.prototype =
-{
-	initialize: function(remote, prefs) {
-		this.remote = remote
-		this.torrents		= {};
-		this._rows			= [];
-		this.changedTorrents= {};
-		this.prefs			= prefs.dict;
-		this.prefsThing		= prefs;
-
-		this.downloadComplete = $.Callbacks();
-		this.statusUpdate = $.Callbacks();
-
-		this.initializeTorrents(null);
-		this.sessionInterval = setInterval($.proxy(this.loadDaemonPrefs,this), 8000);
-	},
-
-	loaddaemonprefs: function(async) {
+	this.loaddaemonprefs = function(async) {
 		this.remote.loaddaemonprefs(function(data) {
 			var o = data['arguments'];
 			prefs.getclutchprefs(o);
 			this.updateguifromsession(o);
-			this.sessionproperties = o;
+			$.merge(this.sessionproperties, o);
 		}, this, async);
-	},
+	};
 
-	getAllTorrents: function() {
+	this.getAllTorrents = function() {
 		return $.map(torrents.slice(0), function(t) {return t});
-	},
+	};
 
-	getTorrentIds: function(torrents) {
+	this.getTorrentIds = function(torrents) {
 		return $.map(torrents.slice(0), function(t) {return t.getid();});
-	},
+	};
 
-	setPref: function(key, val) {
-		this.prefs[key] = val;
-		prefs.setvalue(key, val);
-	},
-
-	setSortMethod: function(sort_method) {
-		this.setPref(Prefs._SortMethod, sort_method);
+	this.setSortMethod = function(sort_method) {
+		this.prefsThing.set("sort-method", sort_method);
 		this.refilter(true);
-	},
+	};
 
-	setSortDirection: function(direction) {
-		this.setPref(Prefs._SortDirection, direction);
+	this.setSortDirection = function(direction) {
+		this.prefsThing.set("sort-method", direction);
 		this.refilter(true);
-	},
+	};
 
-	setUploadSpeed: function(speed){
+	this.setUploadSpeed = function(speed){
 		if(speed)
-			remote.savePrefs({'speed-limit-up': speed,
-							  'speed-limit-up-enabled': true});
+			this.prefsThing.setAll({'speed-limit-up': speed, 'speed-limit-up-enabled': true});
 		else
-			remote.savePrefs({'speed-limit-up-enabled': false});
-	},
+			this.prefsThing.set('speed-limit-up-enabled', false);
+	};
 
-	setDownloadSpeed: function(speed){
+	this.setDownloadSpeed = function(speed){
 		if(speed)
-			remote.savePrefs({'speed-limit-down': speed,
-							  'speed-limit-down-enabled': true});
+			this.prefsThing.setAll({'speed-limit-down': speed, 'speed-limit-down-enabled': true});
 		else
-			remote.savePrefs({'speed-limit-down-enabled': false});
-	},
+			this.prefsThing.set('speed-limit-down-enabled', false);
+	};
 
-	setNotificationsEnabled: function(yes){
+	this.setNotificationsEnabled = function(yes){
 		Notifications && Notifications.setEnabled(yes);
-	},
+	};
 
-	torrentChanged: function(tor){
-		this.changedTorrents[tor.getId()] = tor;
-		this.refilterSoon();
-	},
-
-	updateTorrents: function(ids, fields) {
+	this.updateTorrents = function(ids, fields) {
 		callback = function(changed, removed) {
 			var needinfo = [];
+			var queue = [];
 
-			$.each(changed, function(i, o){
+			$.each(changed, $.proxy(function(i, o){
 				var tor = this.torrents[o.id];
 				if (tor) {
 					needed = tor.needsMetaData();
 					tor.refresh(o);
 					if (needed && !tor.needsMetaData())
-						needinfo.push(id); /* Metadata was not yet completely fetched from DHT */
+						needinfo.push(o.id); /* Metadata was not yet completely fetched from DHT */
 				} else {
 					tor = new Torrent(o);
+					var torrentChanged = $.proxy(function(tor){
+						queue.push(tor);
+					}, this);
 					torrentChanged(tor);
-					tor.dataChanged.add($.proxy(this.torrentChanged,this));
+					tor.dataChanged.add(torrentChanged);
 					// do we need more info for this torrent?
 					if(!('name' in tor.fields && 'status' in tor.fields))
-						needinfo.push(id);
+						needinfo.push(o.id);
 					tor.downloadComplete.add($.proxy(this.downloadComplete.fire, this.downloadComplete));
-					this.torrents[id] = tor;
+					this.torrents[o.id] = tor;
 				}
-			});
+			}, this));
 
 			if (needinfo.length > 0) {
 				// whee, new torrents! get their initial information.
 				this.updateTorrents(needinfo, Torrent.Fields.Metadata);
 			}
 
-			var tr = this;
-			$.each(removed, function(i, id){
-				tr.changedTorrents[id] = null;
-				delete tr.torrents[id];
-			});
-			this.refilterSoon();
-		};
-		this.remote.updateTorrents(ids, Torrent.Fields.Stats, $.proxy(callback, this));
-	},
+			if (removed) {
+				$.each(removed, $.proxy(function(i, id){
+					var tor = tr.torrents[id];
+					tor.deleted = true;
+					queue.push(tor);
+					delete tr.torrents[id];
+				}, this));
+			}
 
-	refreshTorrents: function() {
+			if (queue.length > 0){
+				this.torrentsChanged.fire(queue);
+			}
+		};
+		if(fields == null)
+			fields = Torrent.Fields.Stats
+		this.remote.updateTorrents(ids, fields, $.proxy(callback, this));
+	};
+
+	this.refreshTorrents = function() {
 		this.updateTorrents('recently-active', Torrent.Fields.Stats);
 		clearTimeout(this.refreshTorrentsTimeout);
-		this.refreshTorrentsTimeout = setTimeout($.proxy(this.refreshTorrents, this), this.prefs[Prefs._RefreshRate] * 1000);
-	},
+		//FIXME add refresh-interval session pref
+		this.refreshTorrentsTimeout = setTimeout($.proxy(this.refreshTorrents, this), this.sessionproperties["refresh-interval"]);
+	};
 
-	initializeTorrents: function(ids) {
-		this.updateTorrents(ids, Torrent.Fields.Metadata);
+	this.initializeTorrents = function(ids) {
+		this.updateTorrents(ids, Torrent.Fields.Metadata.concat(Torrent.Fields.Stats));
 		this.refreshTorrents();
-	},
+	};
 
-	removeTorrents: function(torrents) {
+	this.removeTorrents = function(torrents) {
 		this.remote.removeTorrents(torrents);
-	},
+	};
 
-	removeTorrentsAndData: function(torrents) {
+	this.removeTorrentsAndData = function(torrents) {
 		this.remote.removeTorrentsAndData(torrents);
-	},
+	};
 
-	renameTorrent: function (torrent, newname) {
+	this.renameTorrent = function (torrent, newname) {
 		this.remote.renameTorrent([torrent.getId()], torrent.getName(), newname, function(result, obj){
 			if(result == 'success')
 				torrent.refresh(obj);
 		});
-	},
+	};
 
-	startAllTorrents: function() {
+	this.startAllTorrents = function() {
 		this.startTorrents(this.torrents);
-	},
+	};
 
-	startSelectedTorrents: function() {
+	this.startSelectedTorrents = function() {
 		this.startTorrents(this.getSelectedTorrents());
-	},
+	};
 
-	startTorrent: function(torrent) {
+	this.startTorrent = function(torrent) {
 		this.startTorrents([ torrent ]);
-	},
+	};
 
-	startTorrents: function(torrents, force) {
+	this.startTorrents = function(torrents, force) {
 		this.remote.startTorrents(this.getTorrentIds(torrents), force);
-	},
-	verifyTorrent: function(torrent) {
+	};
+	this.verifyTorrent = function(torrent) {
 		this.verifyTorrents([ torrent ]);
-	},
-	verifyTorrents: function(torrents) {
+	};
+	this.verifyTorrents = function(torrents) {
 		this.remote.verifyTorrents(this.getTorrentIds(torrents));
-	},
+	};
 
-	reannounceTorrents: function(torrents) {
+	this.reannounceTorrents = function(torrents) {
 		this.remote.reannounceTorrents(this.getTorrentIds(torrents));
-	},
+	};
 
-	stopAllTorrents: function() {
+	this.stopAllTorrents = function() {
 		this.stopTorrents(this.getAllTorrents());
-	},
+	};
 
-	stopSelectedTorrents: function() {
+	this.stopSelectedTorrents = function() {
 		this.stopTorrents(this.getSelectedTorrents());
-	},
+	};
 
-	stopTorrents: function(torrents) {
+	this.stopTorrents = function(torrents) {
 		this.remote.stopTorrents(this.getTorrentIds(torrents), $.proxy(this.refreshTorrents, this));
-	},
-
-	changeFileCommand: function(torrentId, rowIndices, command) {
-		this.remote.changeFileCommand(torrentId, rowIndices, command);
-	},
-
-	hideMobileAddressbar: function(delaySecs) {
-		if (isMobileDevice && !scroll_timeout) {
-			var callback = $.proxy(this.doToolbarHide,this),
-			    msec = delaySecs*1000 || 150;
-			scroll_timeout = setTimeout(callback,msec);
-		}
-	},
+	};
 
 	// Queue
-	moveTop: function() {
+	this.moveTop = function() {
 		this.remote.moveTorrentsToTop(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
-	},
-	moveUp: function() {
+	};
+	this.moveUp = function() {
 		this.remote.moveTorrentsUp(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
-	},
-	moveDown: function() {
+	};
+	this.moveDown = function() {
 		this.remote.moveTorrentsDown(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
-	},
-	moveBottom: function() {
+	};
+	this.moveBottom = function() {
 		this.remote.moveTorrentsToBottom(this.getSelectedTorrentIds(), $.proxy(this.refreshTorrents, this));
-	},
+	};
 
-	/****
-	*****
-	*****  FILTER
-	*****
-	****/
+	this.remote = remote
+	this.torrents		= {};
+	this._rows			= [];
+	this.prefs			= prefs.dict;
+	this.prefsThing		= prefs;
+	this.sessionproperties = {"refresh-interval": 5000};
 
-	sortRows: function(rows)
-	{
-		var i, tor, row,
-		    id2row = {},
-		    torrents = [];
+	this.downloadComplete = $.Callbacks();
+	this.torrentsChanged = $.Callbacks();
 
-		for (i=0; row=rows[i]; ++i) {
-			tor = row.getTorrent();
-			torrents.push(tor);
-			id2row[ tor.getId() ] = row;
-		}
-
-		Torrent.sortTorrents(torrents, this.prefs[Prefs._SortMethod],
-		                               this.prefs[Prefs._SortDirection]);
-
-		for (i=0; tor=torrents[i]; ++i)
-			rows[i] = id2row[ tor.getId() ];
-	},
-
-	refilter: function(rebuildEverything)
-	{
-		var sort_mode		= this.prefs[Prefs._SortMethod];
-		var sort_direction	= this.prefs[Prefs._SortDirection];
-		var filter_mode		= this.prefs[Prefs._FilterMode];
-		var list = $('#torrent_list');
-
-		this.updateFilterSelect();
-
-		clearTimeout(this.refilterTimer);
-		delete this.refilterTimer;
-
-		var dirtyTorrents = this.dirtyTorrents;
-		if (rebuildEverything)
-			dirtyTorrents = this.torrents;
-		this.dirtyTorrents = {};
-
-		/* Get a list of all displayed rows with changed data */
-		changed = list.children('.torrent-entry').filter(function(idx, elem){
-			var torrent = dirtyTorrents[elem.torrent.getId()];
-			delete dirtyTorrents[elem.torrent.getId()];
-			return !!torrent;
-		});
-		/* Remove elements not matching the filter anymore */
-		changed.filter(function(idx, elem){
-			if(elem.torrent.test(filter_mode, filter_text))
-				return true;
-			elem.remove();
-			return false
-		});
-
-		/* Add all remaining changed torrents that match the filter */
-		var template = $('#torrent-entry-template');
-		$.each(dirtyTorrents, function(idx, tor){
-			if(!tor.test(filter_mode, filter_text))
-				return;
-			var entry = template.clone();
-			entry.children('#title').text();
-			var text = tor.getHaveStr();
-			if (!tor.isDone())
-				text += '/' + tor.getSizeWhenDoneStr();
-			entry.children('#size').text(text);
-			entry.children('#ratio').text(tor.getUploadRatioStr());
-			var progress = entry.children('#progress');
-			progress.text(tor.getProgressStr());
-			progress.attr('aria-valuenow', tor.getProgress());
-			list.append(entry);
-		});
-		
-		/* TODO if this performs too poor, perhaps re-introduce the old behavior of just sorting the changed rows and
-		 * then doing a merge */
-		list.tsort('', {sortFunction: function(a, b){
-			return Torrent.compareTorrents(a.e.torrent, b.e.torrent, this.prefs[Prefs._SortMethod],
-				this.prefs[Prefs._SortDirection]);
-		}});
-
-		this.statusUpdate.fire(total_up, total_down, rows.length);
-		/* TODO selection stuff: if (old_sel_count !== $(list).children('.selected').length)
-			this.selectionChanged(); */
-	},
-
-	setFilterMode: function(mode) {
-		this.setPref(Prefs._FilterMode, mode);
-		this.refilter(true);
-	}
+	this.initializeTorrents(null);
+	this.sessionInterval = setInterval($.proxy(this.loadDaemonPrefs,this), 8000);
 };
